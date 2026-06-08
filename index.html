@@ -59,6 +59,9 @@
     <div class="nav-item" data-page="vouchers">
       <span class="icon">📋</span> سندات القبض والصرف
     </div>
+    <div class="nav-item" data-page="finance">
+      <span class="icon">💹</span> المالية
+    </div>
     <div class="nav-item" data-page="users" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:12px">
       <span class="icon">👥</span> المستخدمين
     </div>
@@ -203,6 +206,23 @@
           </thead>
           <tbody id="vouchersTableBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Finance -->
+    <div class="page" id="page-finance">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)" id="financeStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="table-container">
+          <div class="table-header"><h3>📊 ملخص شهري</h3></div>
+          <div style="padding:16px 20px">
+            <div id="financeMonthlyChart"></div>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>🧾 آخر 10 حركات</h3></div>
+          <div id="financeRecent" style="padding:0 20px"></div>
+        </div>
       </div>
     </div>
 

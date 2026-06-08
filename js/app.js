@@ -131,7 +131,7 @@ function showPage(page) {
     document.getElementById('pageTitle').textContent = 'تفاصيل العمارة';
     document.getElementById('backNavItem').style.display = 'flex';
   } else {
-    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة', vouchers: 'سندات القبض والصرف', users: 'المستخدمين' };
+    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة', vouchers: 'سندات القبض والصرف', finance: 'المالية', users: 'المستخدمين' };
     document.getElementById('pageTitle').textContent = titles[page] || 'لوحة التحكم';
     document.getElementById('backNavItem').style.display = 'none';
   }
@@ -149,6 +149,7 @@ function renderPage(page) {
     case 'maintenance': renderMaintenance(); break;
     case 'users': renderUsers(); break;
     case 'vouchers': renderVouchers(); break;
+    case 'finance': renderFinance(); break;
     case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
   }
 }
@@ -161,6 +162,7 @@ function renderAll() {
   renderPayments();
   renderMaintenance();
   renderVouchers();
+  renderFinance();
   renderUsers();
 }
 
@@ -993,7 +995,68 @@ function renderVouchers() {
   </tr>`).join('');
 }
 
-function toggleVoucherRef() {
+// ---- Finance ----
+function renderFinance() {
+  const vouchers = DB.getVouchers();
+  const inst = DB.getInstallments();
+  const now = new Date();
+  const cy = now.getFullYear();
+
+  // إحصائيات
+  const totalReceipt = vouchers.filter(v => v.type === 'قبض' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
+  const totalPayment = vouchers.filter(v => v.type === 'صرف' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
+  const expected = inst.filter(i => i.status !== 'مدفوع').reduce((s, i) => s + Number(i.amount || 0), 0);
+  const collected = inst.filter(i => i.status === 'مدفوع' && i.paymentDate && new Date(i.paymentDate).getFullYear() === cy).reduce((s, i) => s + Number(i.amount || 0), 0);
+
+  document.getElementById('financeStats').innerHTML = `
+    <div class="stat-card"><div class="label">💵 إجمالي الإيرادات (${cy})</div><div class="value" style="color:var(--success)">${totalReceipt.toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">💸 إجمالي المصروفات (${cy})</div><div class="value" style="color:var(--danger)">${totalPayment.toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">📈 صافي الربح (${cy})</div><div class="value" style="color:${totalReceipt - totalPayment >= 0 ? 'var(--success)' : 'var(--danger)'}">${(totalReceipt - totalPayment).toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">⏳ الذمم المتوقعة</div><div class="value" style="color:var(--warning)">${expected.toLocaleString()} ر.س</div></div>
+  `;
+
+  // رسم بياني شهري (أعمدة CSS)
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  let chartHtml = '<div style="display:flex;gap:4px;align-items:flex-end;height:160px;padding:8px 0">';
+  let maxV = 1;
+  const mData = months.map((m, i) => {
+    const inc = vouchers.filter(v => v.type === 'قبض' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
+    const exp = vouchers.filter(v => v.type === 'صرف' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
+    if (inc + exp > maxV) maxV = inc + exp;
+    return { m: m.substring(0, 3), inc, exp };
+  });
+  mData.forEach(d => {
+    const ih = maxV > 0 ? Math.round((d.inc / maxV) * 140) : 0;
+    const eh = maxV > 0 ? Math.round((d.exp / maxV) * 140) : 0;
+    chartHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div style="display:flex;gap:2px;align-items:flex-end;height:140px">
+        <div style="width:14px;background:var(--success);border-radius:4px 4px 0 0;height:${ih}px;transition:height 0.3s" title="دخل: ${d.inc.toLocaleString()}"></div>
+        <div style="width:14px;background:var(--danger);border-radius:4px 4px 0 0;height:${eh}px;transition:height 0.3s" title="مصروف: ${d.exp.toLocaleString()}"></div>
+      </div>
+      <span style="font-size:10px;color:var(--gray-500)">${d.m}</span>
+    </div>`;
+  });
+  chartHtml += '</div><div style="display:flex;gap:16px;justify-content:center;font-size:12px;margin-top:4px"><span><span style="display:inline-block;width:12px;height:12px;background:var(--success);border-radius:2px;vertical-align:middle"></span> دخل</span><span><span style="display:inline-block;width:12px;height:12px;background:var(--danger);border-radius:2px;vertical-align:middle"></span> مصروف</span></div>';
+  document.getElementById('financeMonthlyChart').innerHTML = chartHtml;
+
+  // آخر 10 حركات
+  const sorted = [...vouchers].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10);
+  if (sorted.length === 0) {
+    document.getElementById('financeRecent').innerHTML = '<div class="empty-state" style="padding:24px"><div class="icon">📋</div><p>لا توجد حركات مالية</p></div>';
+    return;
+  }
+  document.getElementById('financeRecent').innerHTML = sorted.map(v => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+      <div>
+        <div style="font-weight:500;font-size:14px"><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}" style="font-size:11px;padding:2px 8px">${v.type === 'قبض' ? 'قبض' : 'صرف'}</span> ${v.description ? v.description.substring(0, 25) : '—'}</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px">${v.date || ''} ${v.number ? '| ' + v.number : ''}</div>
+      </div>
+      <div style="font-weight:600;font-size:16px;color:${v.type === 'قبض' ? 'var(--success)' : 'var(--danger)'}">${v.type === 'قبض' ? '+' : '-'}${Number(v.amount || 0).toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+// ---- Vouchers ----
   const t = document.getElementById('voucherRefType').value;
   document.getElementById('voucherRefContractGroup').style.display = t === 'contract' ? 'block' : 'none';
   document.getElementById('voucherRefManualGroup').style.display = t === 'manual' ? 'block' : 'none';
