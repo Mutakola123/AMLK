@@ -212,16 +212,52 @@
     <!-- Finance -->
     <div class="page" id="page-finance">
       <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)" id="financeStats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <div class="table-container">
-          <div class="table-header"><h3>📊 ملخص شهري</h3></div>
-          <div style="padding:16px 20px">
-            <div id="financeMonthlyChart"></div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="showFinSubPage('overview')">📊 نظرة عامة</button>
+        <button class="tab" onclick="showFinSubPage('income')">💵 الإيرادات</button>
+        <button class="tab" onclick="showFinSubPage('expense')">💸 المصروفات</button>
+      </div>
+
+      <!-- Overview -->
+      <div id="finOverview">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="table-container">
+            <div class="table-header"><h3>📈 ملخص شهري (إيرادات + مصروفات)</h3></div>
+            <div style="padding:16px 20px"><div id="financeMonthlyChart"></div></div>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>🧾 آخر الحركات</h3></div>
+            <div id="financeRecent" style="padding:0 20px"></div>
           </div>
         </div>
+      </div>
+
+      <!-- Income list -->
+      <div id="finIncome" style="display:none">
         <div class="table-container">
-          <div class="table-header"><h3>🧾 آخر 10 حركات</h3></div>
-          <div id="financeRecent" style="padding:0 20px"></div>
+          <div class="table-header">
+            <h3>💵 الإيرادات (غير الإيجارية)</h3>
+            <button class="btn btn-primary" onclick="openFinEntryForm('إيراد')">+ إضافة إيراد</button>
+          </div>
+          <table>
+            <thead><tr><th>التاريخ</th><th>التصنيف</th><th>البيان</th><th>المبلغ</th><th></th></tr></thead>
+            <tbody id="finIncomeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Expense list -->
+      <div id="finExpense" style="display:none">
+        <div class="table-container">
+          <div class="table-header">
+            <h3>💸 المصروفات</h3>
+            <button class="btn btn-primary" onclick="openFinEntryForm('مصروف')">+ إضافة مصروف</button>
+          </div>
+          <table>
+            <thead><tr><th>التاريخ</th><th>التصنيف</th><th>البيان</th><th>المبلغ</th><th></th></tr></thead>
+            <tbody id="finExpenseTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -634,6 +670,42 @@
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveVoucher()">💾 حفظ السند</button>
       <button class="btn" style="background:var(--gray-100)" onclick="closeModal('voucherModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- FinEntry Modal -->
+<div class="modal-overlay" id="finEntryModal">
+  <div class="modal" style="max-width:450px">
+    <div class="modal-header">
+      <h3 id="modalTitle_finEntry">إضافة إيراد</h3>
+      <button class="modal-close" onclick="closeModal('finEntryModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="finEntryId">
+      <input type="hidden" id="finEntryType">
+      <div class="form-row">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="finEntryDate">
+        </div>
+        <div class="form-group">
+          <label>التصنيف</label>
+          <select id="finEntryCategory"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>المبلغ (ر.س)</label>
+        <input type="number" id="finEntryAmount" placeholder="مثال: 1000" min="0">
+      </div>
+      <div class="form-group">
+        <label>البيان</label>
+        <textarea id="finEntryDesc" rows="2" placeholder="وصف"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveFinEntry()">💾 حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('finEntryModal')">إلغاء</button>
     </div>
   </div>
 </div>

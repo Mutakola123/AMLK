@@ -996,32 +996,53 @@ function renderVouchers() {
 }
 
 // ---- Finance ----
+let finSubPage = 'overview';
+
+function showFinSubPage(page) {
+  finSubPage = page;
+  document.querySelectorAll('#page-finance .tabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#page-finance .tabs .tab')[page === 'overview' ? 0 : page === 'income' ? 1 : 2].classList.add('active');
+  document.getElementById('finOverview').style.display = page === 'overview' ? 'block' : 'none';
+  document.getElementById('finIncome').style.display = page === 'income' ? 'block' : 'none';
+  document.getElementById('finExpense').style.display = page === 'expense' ? 'block' : 'none';
+  if (page === 'income') renderFinIncome();
+  else if (page === 'expense') renderFinExpense();
+}
+
+const FIN_CATEGORIES = {
+  'إيراد': ['خدمات', 'غرامات تأخير', 'تعويضات', 'إيرادات متنوعة'],
+  'مصروف': ['صيانة', 'كهرباء', 'مياه', 'رواتب', 'اتصالات', 'نظافة', 'مصروفات متنوعة']
+};
+
 function renderFinance() {
+  const finEntries = DB.getFinEntries();
   const vouchers = DB.getVouchers();
   const inst = DB.getInstallments();
   const now = new Date();
   const cy = now.getFullYear();
 
-  // إحصائيات
-  const totalReceipt = vouchers.filter(v => v.type === 'قبض' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
-  const totalPayment = vouchers.filter(v => v.type === 'صرف' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
+  // الإيرادات غير الإيجارية + الإيجارية
+  const nonRentIncome = finEntries.filter(e => e.type === 'إيراد' && e.date && new Date(e.date).getFullYear() === cy).reduce((s, e) => s + Number(e.amount || 0), 0);
+  const rentIncome = vouchers.filter(v => v.type === 'قبض' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
+  const expenses = finEntries.filter(e => e.type === 'مصروف' && e.date && new Date(e.date).getFullYear() === cy).reduce((s, e) => s + Number(e.amount || 0), 0);
   const expected = inst.filter(i => i.status !== 'مدفوع').reduce((s, i) => s + Number(i.amount || 0), 0);
-  const collected = inst.filter(i => i.status === 'مدفوع' && i.paymentDate && new Date(i.paymentDate).getFullYear() === cy).reduce((s, i) => s + Number(i.amount || 0), 0);
 
   document.getElementById('financeStats').innerHTML = `
-    <div class="stat-card"><div class="label">💵 إجمالي الإيرادات (${cy})</div><div class="value" style="color:var(--success)">${totalReceipt.toLocaleString()} ر.س</div></div>
-    <div class="stat-card"><div class="label">💸 إجمالي المصروفات (${cy})</div><div class="value" style="color:var(--danger)">${totalPayment.toLocaleString()} ر.س</div></div>
-    <div class="stat-card"><div class="label">📈 صافي الربح (${cy})</div><div class="value" style="color:${totalReceipt - totalPayment >= 0 ? 'var(--success)' : 'var(--danger)'}">${(totalReceipt - totalPayment).toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">💵 إيرادات غير إيجارية (${cy})</div><div class="value" style="color:var(--success)">${nonRentIncome.toLocaleString()} ر.س</div><div class="sub">إيجارية: ${rentIncome.toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">💸 المصروفات (${cy})</div><div class="value" style="color:var(--danger)">${expenses.toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">📈 صافي غير الإيجاري (${cy})</div><div class="value" style="color:${nonRentIncome - expenses >= 0 ? 'var(--success)' : 'var(--danger)'}">${(nonRentIncome - expenses).toLocaleString()} ر.س</div><div class="sub">إجمالي الإيرادات: ${(nonRentIncome + rentIncome).toLocaleString()} ر.س</div></div>
     <div class="stat-card"><div class="label">⏳ الذمم المتوقعة</div><div class="value" style="color:var(--warning)">${expected.toLocaleString()} ر.س</div></div>
   `;
 
-  // رسم بياني شهري (أعمدة CSS)
+  // رسم بياني شهري
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   let chartHtml = '<div style="display:flex;gap:4px;align-items:flex-end;height:160px;padding:8px 0">';
   let maxV = 1;
   const mData = months.map((m, i) => {
-    const inc = vouchers.filter(v => v.type === 'قبض' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
-    const exp = vouchers.filter(v => v.type === 'صرف' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
+    const inc = finEntries.filter(e => e.type === 'إيراد' && e.date).filter(e => { const d = new Date(e.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, e) => s + Number(e.amount || 0), 0)
+      + vouchers.filter(v => v.type === 'قبض' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
+    const exp = finEntries.filter(e => e.type === 'مصروف' && e.date).filter(e => { const d = new Date(e.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, e) => s + Number(e.amount || 0), 0)
+      + vouchers.filter(v => v.type === 'صرف' && v.date).filter(v => { const d = new Date(v.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, v) => s + Number(v.amount || 0), 0);
     if (inc + exp > maxV) maxV = inc + exp;
     return { m: m.substring(0, 3), inc, exp };
   });
@@ -1039,21 +1060,111 @@ function renderFinance() {
   chartHtml += '</div><div style="display:flex;gap:16px;justify-content:center;font-size:12px;margin-top:4px"><span><span style="display:inline-block;width:12px;height:12px;background:var(--success);border-radius:2px;vertical-align:middle"></span> دخل</span><span><span style="display:inline-block;width:12px;height:12px;background:var(--danger);border-radius:2px;vertical-align:middle"></span> مصروف</span></div>';
   document.getElementById('financeMonthlyChart').innerHTML = chartHtml;
 
-  // آخر 10 حركات
-  const sorted = [...vouchers].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10);
-  if (sorted.length === 0) {
+  // آخر الحركات (دمج finEntries + vouchers)
+  const all = [
+    ...finEntries.map(e => ({ ...e, _sort: e.date || '' })),
+    ...vouchers.map(v => ({ ...v, type: v.type === 'قبض' ? 'إيراد إيجاري' : 'مصروف إيجاري', _sort: v.date || '' }))
+  ].sort((a, b) => b._sort.localeCompare(a._sort)).slice(0, 10);
+  if (all.length === 0) {
     document.getElementById('financeRecent').innerHTML = '<div class="empty-state" style="padding:24px"><div class="icon">📋</div><p>لا توجد حركات مالية</p></div>';
     return;
   }
-  document.getElementById('financeRecent').innerHTML = sorted.map(v => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+  document.getElementById('financeRecent').innerHTML = all.map(v => {
+    const isIncome = v.type === 'إيراد' || v.type === 'إيراد إيجاري';
+    const color = isIncome ? 'var(--success)' : 'var(--danger)';
+    const badgeClass = v.type === 'إيراد' ? 'badge-success' : v.type === 'مصروف' ? 'badge-warning' : v.type === 'إيراد إيجاري' ? 'badge-info' : 'badge-warning';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100)">
       <div>
-        <div style="font-weight:500;font-size:14px"><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}" style="font-size:11px;padding:2px 8px">${v.type === 'قبض' ? 'قبض' : 'صرف'}</span> ${v.description ? v.description.substring(0, 25) : '—'}</div>
-        <div style="font-size:12px;color:var(--gray-500);margin-top:2px">${v.date || ''} ${v.number ? '| ' + v.number : ''}</div>
+        <div style="font-weight:500;font-size:14px"><span class="badge ${badgeClass}" style="font-size:11px;padding:2px 8px">${v.type}</span> ${(v.description || '').substring(0, 25)}</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px">${v.date || ''}${v.category ? ' | ' + v.category : ''}</div>
       </div>
-      <div style="font-weight:600;font-size:16px;color:${v.type === 'قبض' ? 'var(--success)' : 'var(--danger)'}">${v.type === 'قبض' ? '+' : '-'}${Number(v.amount || 0).toLocaleString()}</div>
-    </div>
-  `).join('');
+      <div style="font-weight:600;font-size:16px;color:${color}">${isIncome ? '+' : '-'}${Number(v.amount || 0).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinIncome() {
+  const items = DB.getFinEntries().filter(e => e.type === 'إيراد').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const tbody = document.getElementById('finIncomeTableBody');
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">💵</div><p>لا توجد إيرادات غير إيجارية</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(e => `<tr>
+    <td style="color:var(--gray-700)">${e.date || '—'}</td>
+    <td><span class="badge badge-info">${e.category || '—'}</span></td>
+    <td>${e.description || '—'}</td>
+    <td style="font-weight:600;color:var(--success)">${Number(e.amount || 0).toLocaleString()} ر.س</td>
+    <td><div class="actions">
+      <button class="btn-icon" onclick="editFinEntry(${e.id})" title="تعديل">✏️</button>
+      <button class="btn-icon" onclick="deleteFinEntry(${e.id})" title="حذف">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function renderFinExpense() {
+  const items = DB.getFinEntries().filter(e => e.type === 'مصروف').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const tbody = document.getElementById('finExpenseTableBody');
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">💸</div><p>لا توجد مصروفات</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(e => `<tr>
+    <td style="color:var(--gray-700)">${e.date || '—'}</td>
+    <td><span class="badge badge-warning">${e.category || '—'}</span></td>
+    <td>${e.description || '—'}</td>
+    <td style="font-weight:600;color:var(--danger)">${Number(e.amount || 0).toLocaleString()} ر.س</td>
+    <td><div class="actions">
+      <button class="btn-icon" onclick="editFinEntry(${e.id})" title="تعديل">✏️</button>
+      <button class="btn-icon" onclick="deleteFinEntry(${e.id})" title="حذف">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openFinEntryForm(type, data) {
+  editingId = data?.id || null;
+  document.getElementById('finEntryId').value = data?.id || '';
+  document.getElementById('finEntryType').value = type;
+  document.getElementById('finEntryDate').value = data?.date || new Date().toISOString().split('T')[0];
+  document.getElementById('finEntryAmount').value = data?.amount || '';
+  document.getElementById('finEntryDesc').value = data?.description || '';
+  document.getElementById('modalTitle_finEntry').textContent = type === 'إيراد' ? (data ? 'تعديل الإيراد' : 'إضافة إيراد جديد') : (data ? 'تعديل المصروف' : 'إضافة مصروف جديد');
+  const catSel = document.getElementById('finEntryCategory');
+  catSel.innerHTML = FIN_CATEGORIES[type].map(c => `<option value="${c}" ${c === data?.category ? 'selected' : ''}>${c}</option>`).join('');
+  openModal('finEntryModal');
+}
+
+function saveFinEntry() {
+  const type = document.getElementById('finEntryType').value;
+  const data = {
+    id: editingId || null,
+    type,
+    date: document.getElementById('finEntryDate').value,
+    category: document.getElementById('finEntryCategory').value,
+    amount: document.getElementById('finEntryAmount').value,
+    description: document.getElementById('finEntryDesc').value.trim()
+  };
+  if (!data.date || !data.amount || Number(data.amount) <= 0) return alert('الرجاء إدخال التاريخ والمبلغ');
+  if (!data.description) return alert('الرجاء إدخال بيان');
+  DB.saveFinEntry(data);
+  closeModal('finEntryModal');
+  renderFinance();
+  if (finSubPage === 'income') renderFinIncome();
+  else if (finSubPage === 'expense') renderFinExpense();
+}
+
+function editFinEntry(id) {
+  const e = DB.getFinEntry(id);
+  if (e) openFinEntryForm(e.type, e);
+}
+
+function deleteFinEntry(id) {
+  if (confirm('حذف هذا البند؟')) {
+    DB.deleteFinEntry(id);
+    renderFinance();
+    if (finSubPage === 'income') renderFinIncome();
+    else if (finSubPage === 'expense') renderFinExpense();
+  }
 }
 
 // ---- Vouchers ----

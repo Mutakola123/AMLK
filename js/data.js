@@ -319,6 +319,26 @@ const DB = {
   },
   getVoucher(id) { return this.getVouchers().find(i => i.id === id); },
 
+  // الإيرادات والمصروفات (غير الإيجارية)
+  getFinEntries() { return this._get('finEntries'); },
+  saveFinEntry(e) {
+    const items = this.getFinEntries();
+    if (e.id) {
+      const idx = items.findIndex(i => i.id === e.id);
+      if (idx > -1) items[idx] = e;
+    } else {
+      e.id = this._nextId(items);
+      e.createdAt = new Date().toISOString();
+      items.push(e);
+    }
+    this._set('finEntries', items);
+    return e;
+  },
+  deleteFinEntry(id) {
+    this._set('finEntries', this.getFinEntries().filter(i => i.id !== id));
+  },
+  getFinEntry(id) { return this.getFinEntries().find(i => i.id === id); },
+
   // تهيئة بيانات تجريبية
   seed() {
     if (this.getProperties().length > 0) return;
@@ -368,5 +388,14 @@ const DB = {
       { id: 4, type: 'صرف', number: 'SND-0004', date: '2026-03-01', amount: '1500', description: 'صيانة مكيفات - مجمع السلام', reference: 'طلب صيانة #2', createdAt: new Date().toISOString() },
     ];
     this._set('vouchers', vouchers);
+    const finEntries = [
+      { id: 1, type: 'إيراد', category: 'خدمات', amount: '2000', date: '2026-01-10', description: 'رسوم خدمات شقة 101', createdAt: new Date().toISOString() },
+      { id: 2, type: 'مصروف', category: 'كهرباء', amount: '1200', date: '2026-01-25', description: 'فاتورة كهرباء عمارة النور', createdAt: new Date().toISOString() },
+      { id: 3, type: 'مصروف', category: 'مياه', amount: '450', date: '2026-02-01', description: 'فاتورة مياه مجمع السلام', createdAt: new Date().toISOString() },
+      { id: 4, type: 'إيراد', category: 'غرامات تأخير', amount: '500', date: '2026-02-05', description: 'غرامة تأخير سداد - أحمد محمد', createdAt: new Date().toISOString() },
+      { id: 5, type: 'مصروف', category: 'رواتب', amount: '5000', date: '2026-02-28', description: 'راتب حارس العمارة', createdAt: new Date().toISOString() },
+      { id: 6, type: 'مصروف', category: 'صيانة', amount: '2500', date: '2026-03-15', description: 'صيانة مصعد عمارة النور', createdAt: new Date().toISOString() },
+    ];
+    this._set('finEntries', finEntries);
   }
 };
