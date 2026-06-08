@@ -1168,6 +1168,7 @@ function deleteFinEntry(id) {
 }
 
 // ---- Vouchers ----
+function toggleVoucherRef() {
   const t = document.getElementById('voucherRefType').value;
   document.getElementById('voucherRefContractGroup').style.display = t === 'contract' ? 'block' : 'none';
   document.getElementById('voucherRefManualGroup').style.display = t === 'manual' ? 'block' : 'none';
