@@ -56,6 +56,9 @@
     <div class="nav-item" data-page="maintenance">
       <span class="icon">🔧</span> الصيانة
     </div>
+    <div class="nav-item" data-page="vouchers">
+      <span class="icon">📋</span> سندات القبض والصرف
+    </div>
     <div class="nav-item" data-page="users" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:12px">
       <span class="icon">👥</span> المستخدمين
     </div>
@@ -164,6 +167,27 @@
             <tr><th>الطلب</th><th>العقار</th><th>الوصف</th><th>التكلفة</th><th>التاريخ</th><th>الحالة</th><th></th></tr>
           </thead>
           <tbody id="maintenanceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Vouchers -->
+    <div class="page" id="page-vouchers">
+      <div class="tabs" id="voucherTabs">
+        <button class="tab active" data-vtype="all" onclick="filterVouchers('all')">الكل</button>
+        <button class="tab" data-vtype="قبض" onclick="filterVouchers('قبض')">سندات قبض</button>
+        <button class="tab" data-vtype="صرف" onclick="filterVouchers('صرف')">سندات صرف</button>
+      </div>
+      <div class="table-container">
+        <div class="table-header">
+          <h3>السندات</h3>
+          <button class="btn btn-primary" onclick="openVoucherForm()">+ إضافة سند</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>رقم السند</th><th>النوع</th><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>المرجع</th><th></th></tr>
+          </thead>
+          <tbody id="vouchersTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -513,6 +537,45 @@
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveUnit()">حفظ</button>
       <button class="btn" style="background:var(--gray-100)" onclick="closeModal('unitModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Voucher Modal -->
+<div class="modal-overlay" id="voucherModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_voucher">إضافة سند جديد</h3>
+      <button class="modal-close" onclick="closeModal('voucherModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="voucherId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>نوع السند</label>
+          <select id="voucherType"><option>قبض</option><option>صرف</option></select>
+        </div>
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="voucherDate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>المبلغ (ر.س)</label>
+        <input type="number" id="voucherAmount" placeholder="مثال: 15000">
+      </div>
+      <div class="form-group">
+        <label>البيان</label>
+        <textarea id="voucherDesc" rows="2" placeholder="وصف السند"></textarea>
+      </div>
+      <div class="form-group">
+        <label>المرجع (اختياري)</label>
+        <input type="text" id="voucherRef" placeholder="مثال: قسط 1 من عقد #3">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveVoucher()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('voucherModal')">إلغاء</button>
     </div>
   </div>
 </div>

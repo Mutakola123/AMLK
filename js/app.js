@@ -131,7 +131,7 @@ function showPage(page) {
     document.getElementById('pageTitle').textContent = 'تفاصيل العمارة';
     document.getElementById('backNavItem').style.display = 'flex';
   } else {
-    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة', users: 'المستخدمين' };
+    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة', vouchers: 'سندات القبض والصرف', users: 'المستخدمين' };
     document.getElementById('pageTitle').textContent = titles[page] || 'لوحة التحكم';
     document.getElementById('backNavItem').style.display = 'none';
   }
@@ -148,6 +148,7 @@ function renderPage(page) {
     case 'payments': renderPayments(); break;
     case 'maintenance': renderMaintenance(); break;
     case 'users': renderUsers(); break;
+    case 'vouchers': renderVouchers(); break;
     case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
   }
 }
@@ -159,6 +160,7 @@ function renderAll() {
   renderContracts();
   renderPayments();
   renderMaintenance();
+  renderVouchers();
   renderUsers();
 }
 
@@ -845,8 +847,18 @@ function savePayment() {
   inst.paymentMethod = document.getElementById('payMethod').value;
   inst.notes = document.getElementById('payNotes').value.trim();
   DB.saveInstallment(inst);
+  // إنشاء سند قبض آلي
+  const contract = DB.getContract(inst.contractId);
+  DB.saveVoucher({
+    type: 'قبض',
+    date: inst.paymentDate,
+    amount: inst.amount,
+    description: `قسط مستحق ${inst.dueDate}`,
+    reference: contract ? `عقد #${contract.id} - ${contract.paymentFrequency}` : `قسط #${inst.id}`
+  });
   closeModal('paymentModal');
   renderPayments();
+  renderVouchers();
   renderDashboard();
   const p = document.getElementById(`page-${currentPage}`);
   if (p && currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
@@ -933,6 +945,72 @@ function deleteMaintenance(id) {
     DB.deleteMaintenance(id);
     renderMaintenance();
     renderDashboard();
+  }
+}
+
+// ---- Vouchers ----
+let voucherFilter = 'all';
+
+function filterVouchers(type) {
+  voucherFilter = type;
+  document.querySelectorAll('#voucherTabs .tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.vtype === type);
+  });
+  renderVouchers();
+}
+
+function renderVouchers() {
+  const items = DB.getVouchers();
+  const filtered = voucherFilter === 'all' ? items : items.filter(v => v.type === voucherFilter);
+  const tbody = document.getElementById('vouchersTableBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div><p>لا توجد سندات</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(v => `<tr>
+    <td style="font-weight:600;font-family:monospace;direction:ltr">${v.number}</td>
+    <td><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}">${v.type}</span></td>
+    <td style="color:var(--gray-700)">${v.date}</td>
+    <td>${v.description}</td>
+    <td style="font-weight:600">${Number(v.amount).toLocaleString()} ر.س</td>
+    <td style="color:var(--gray-500);font-size:13px">${v.reference || '-'}</td>
+    <td><div class="actions">
+      <button class="btn-icon" onclick="deleteVoucher(${v.id})" title="حذف">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openVoucherForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('voucherId').value = data?.id || '';
+  document.getElementById('voucherType').value = data?.type || 'قبض';
+  document.getElementById('voucherDate').value = data?.date || new Date().toISOString().split('T')[0];
+  document.getElementById('voucherAmount').value = data?.amount || '';
+  document.getElementById('voucherDesc').value = data?.description || '';
+  document.getElementById('voucherRef').value = data?.reference || '';
+  document.getElementById('modalTitle_voucher').textContent = data ? 'تعديل السند' : 'إضافة سند جديد';
+  openModal('voucherModal');
+}
+
+function saveVoucher() {
+  const data = {
+    id: editingId || null,
+    type: document.getElementById('voucherType').value,
+    date: document.getElementById('voucherDate').value,
+    amount: document.getElementById('voucherAmount').value,
+    description: document.getElementById('voucherDesc').value.trim(),
+    reference: document.getElementById('voucherRef').value.trim()
+  };
+  if (!data.date || !data.amount) return alert('الرجاء إدخال التاريخ والمبلغ');
+  DB.saveVoucher(data);
+  closeModal('voucherModal');
+  renderVouchers();
+}
+
+function deleteVoucher(id) {
+  if (confirm('حذف هذا السند؟')) {
+    DB.deleteVoucher(id);
+    renderVouchers();
   }
 }
 

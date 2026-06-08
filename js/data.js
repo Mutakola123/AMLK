@@ -298,6 +298,27 @@ const DB = {
     };
   },
 
+  // السندات
+  getVouchers() { return this._get('vouchers'); },
+  saveVoucher(v) {
+    const items = this.getVouchers();
+    if (v.id) {
+      const idx = items.findIndex(i => i.id === v.id);
+      if (idx > -1) items[idx] = v;
+    } else {
+      v.id = this._nextId(items);
+      v.number = `SND-${String(v.id).padStart(4, '0')}`;
+      v.createdAt = new Date().toISOString();
+      items.push(v);
+    }
+    this._set('vouchers', items);
+    return v;
+  },
+  deleteVoucher(id) {
+    this._set('vouchers', this.getVouchers().filter(i => i.id !== id));
+  },
+  getVoucher(id) { return this.getVouchers().find(i => i.id === id); },
+
   // تهيئة بيانات تجريبية
   seed() {
     if (this.getProperties().length > 0) return;
