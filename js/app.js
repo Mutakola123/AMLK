@@ -1106,7 +1106,7 @@ function printVoucher(id) {
     </style>
   </head><body>
     <div class="vp">
-      <div class="vp-org"><h2>${org ? org.name : 'المؤسسة العقارية'}</h2><span>${org ? org.phone || '' : ''}</span></div>
+      <div class="vp-org"><div style="font-size:48px;margin-bottom:8px">${org ? (org.logo || '🏢') : '🏢'}</div><h2>${org ? org.name : 'المؤسسة العقارية'}</h2><span>${org ? org.phone || '' : ''} ${org && org.email ? '| ' + org.email : ''}</span></div>
       <div class="vp-hdr">
         <div class="t" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${v.type === 'قبض' ? '📥' : '📤'} سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</div>
         <div class="n">${v.number || ''}<br><span style="font-size:12px;color:#9aa0a6">${v.date || ''}</span></div>
