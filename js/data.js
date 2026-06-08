@@ -339,6 +339,47 @@ const DB = {
   },
   getFinEntry(id) { return this.getFinEntries().find(i => i.id === id); },
 
+  // تصدير جميع بيانات المؤسسات
+  exportAll() {
+    const data = {};
+    const orgs = this._getOrgs();
+    data._orgs = orgs;
+    data._currentOrg = localStorage.getItem('_currentOrg') || '';
+    data._users = (() => { try { return JSON.parse(localStorage.getItem('_users')); } catch { return null; } })();
+    orgs.forEach(o => {
+      const prefix = `org_${o.id}_`;
+      ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries'].forEach(k => {
+        const key = prefix + k;
+        const val = localStorage.getItem(key);
+        if (val) data[key] = JSON.parse(val);
+      });
+    });
+    data._exportedAt = new Date().toISOString();
+    data._version = 1;
+    return JSON.stringify(data, null, 2);
+  },
+
+  // استيراد بيانات المؤسسات
+  importAll(jsonStr) {
+    const data = JSON.parse(jsonStr);
+    if (!data._orgs) throw new Error('ملف غير صالح: لا يوجد قائمة مؤسسات');
+    // حفظ قائمة المؤسسات والمستخدمين
+    this._setOrgs(data._orgs);
+    if (data._users) localStorage.setItem('_users', JSON.stringify(data._users));
+    // حفظ كل مفتاح موجود
+    Object.keys(data).forEach(key => {
+      if (key.startsWith('org_') || key === '_users') {
+        localStorage.setItem(key, JSON.stringify(data[key]));
+      }
+    });
+    // تعيين المؤسسة الحالية
+    if (data._currentOrg) {
+      localStorage.setItem('_currentOrg', data._currentOrg);
+      this._currentOrgId = parseInt(data._currentOrg);
+    }
+    return Object.keys(data).filter(k => k.startsWith('org_')).length;
+  },
+
   // تهيئة بيانات تجريبية
   seed() {
     if (this.getProperties().length > 0) return;

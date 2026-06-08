@@ -1373,6 +1373,46 @@ function deleteUser(user) {
   renderUsers();
 }
 
+// ---- تصدير واستيراد البيانات ----
+function exportData() {
+  try {
+    const json = DB.exportAll();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const now = new Date();
+    a.download = `amlk-backup-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('✅ تم تصدير البيانات بنجاح');
+  } catch (e) { alert('❌ خطأ في التصدير: ' + e.message); }
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('⚠️ استيراد البيانات سيحل محل جميع البيانات الحالية. هل أنت متأكد؟')) {
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const count = DB.importAll(e.target.result);
+      alert(`✅ تم استيراد بيانات ${count} مؤسسة بنجاح.\nسيتم تحديث الصفحة الآن.`);
+      event.target.value = '';
+      window.location.reload();
+    } catch (err) {
+      alert('❌ خطأ في الاستيراد: ' + err.message + '\nتأكد من أن الملف صحيح.');
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ---- Helpers ----
 function populateSelect(id, items, selectedId, labelKey = 'name') {
   const sel = document.getElementById(id);
