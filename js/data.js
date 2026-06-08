@@ -360,5 +360,13 @@ const DB = {
     this._set('maintenance', maintenance);
     this._set('installments', []);
     contracts.forEach(c => this.generateInstallments(c));
+    // سندات تجريبية
+    const vouchers = [
+      { id: 1, type: 'قبض', number: 'SND-0001', date: '2026-01-15', amount: '15000', description: 'تحصيل إيجار عمارة النور - أحمد محمد', reference: 'عقد #1', createdAt: new Date().toISOString() },
+      { id: 2, type: 'صرف', number: 'SND-0002', date: '2026-02-15', amount: '800', description: 'إصلاح سباكة - شقة 101', reference: 'طلب صيانة #1', createdAt: new Date().toISOString() },
+      { id: 3, type: 'قبض', number: 'SND-0003', date: '2026-02-01', amount: '50000', description: 'تحصيل إيجار فيلا الواحة - سارة خالد', reference: 'عقد #2', createdAt: new Date().toISOString() },
+      { id: 4, type: 'صرف', number: 'SND-0004', date: '2026-03-01', amount: '1500', description: 'صيانة مكيفات - مجمع السلام', reference: 'طلب صيانة #2', createdAt: new Date().toISOString() },
+    ];
+    this._set('vouchers', vouchers);
   }
 };

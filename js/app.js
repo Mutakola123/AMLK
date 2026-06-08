@@ -847,14 +847,16 @@ function savePayment() {
   inst.paymentMethod = document.getElementById('payMethod').value;
   inst.notes = document.getElementById('payNotes').value.trim();
   DB.saveInstallment(inst);
-  // إنشاء سند قبض آلي
+  // إنشاء سند قبض آلي عند تسديد القسط
   const contract = DB.getContract(inst.contractId);
+  const prop = contract ? DB.getProperty(contract.propertyId) : null;
+  const tenant = contract ? DB.getTenant(contract.tenantId) : null;
   DB.saveVoucher({
     type: 'قبض',
     date: inst.paymentDate,
     amount: inst.amount,
-    description: `قسط مستحق ${inst.dueDate}`,
-    reference: contract ? `عقد #${contract.id} - ${contract.paymentFrequency}` : `قسط #${inst.id}`
+    description: `تحصيل إيجار ${prop ? prop.name : ''} - ${tenant ? tenant.name : ''}`,
+    reference: contract ? `عقد #${contract.id}` : ''
   });
   closeModal('paymentModal');
   renderPayments();
@@ -959,8 +961,17 @@ function filterVouchers(type) {
   renderVouchers();
 }
 
+function renderVoucherStats(items) {
+  const receiptTotal = items.filter(v => v.type === 'قبض').reduce((s, v) => s + Number(v.amount || 0), 0);
+  const paymentTotal = items.filter(v => v.type === 'صرف').reduce((s, v) => s + Number(v.amount || 0), 0);
+  document.getElementById('vstatReceipt').textContent = receiptTotal.toLocaleString() + ' ر.س';
+  document.getElementById('vstatPayment').textContent = paymentTotal.toLocaleString() + ' ر.س';
+  document.getElementById('vstatBalance').textContent = (receiptTotal - paymentTotal).toLocaleString() + ' ر.س';
+}
+
 function renderVouchers() {
   const items = DB.getVouchers();
+  renderVoucherStats(items);
   const filtered = voucherFilter === 'all' ? items : items.filter(v => v.type === voucherFilter);
   const tbody = document.getElementById('vouchersTableBody');
   if (filtered.length === 0) {
@@ -968,16 +979,48 @@ function renderVouchers() {
     return;
   }
   tbody.innerHTML = filtered.map(v => `<tr>
-    <td style="font-weight:600;font-family:monospace;direction:ltr">${v.number}</td>
-    <td><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}">${v.type}</span></td>
-    <td style="color:var(--gray-700)">${v.date}</td>
-    <td>${v.description}</td>
-    <td style="font-weight:600">${Number(v.amount).toLocaleString()} ر.س</td>
-    <td style="color:var(--gray-500);font-size:13px">${v.reference || '-'}</td>
+    <td style="font-weight:600;font-family:monospace;direction:ltr">${v.number || '—'}</td>
+    <td><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}">${v.type === 'قبض' ? '📥 قبض' : '📤 صرف'}</span></td>
+    <td style="color:var(--gray-700)">${v.date || '—'}</td>
+    <td title="${v.description || ''}">${(v.description || '').substring(0, 35)}${(v.description || '').length > 35 ? '…' : ''}</td>
+    <td style="font-weight:600">${Number(v.amount || 0).toLocaleString()} ر.س</td>
+    <td style="color:var(--gray-500);font-size:13px">${v.reference || '—'}</td>
     <td><div class="actions">
+      <button class="btn-icon" onclick="editVoucher(${v.id})" title="تعديل">✏️</button>
+      <button class="btn-icon" onclick="printVoucher(${v.id})" title="طباعة">🖨️</button>
       <button class="btn-icon" onclick="deleteVoucher(${v.id})" title="حذف">🗑️</button>
     </div></td>
   </tr>`).join('');
+}
+
+function toggleVoucherRef() {
+  const t = document.getElementById('voucherRefType').value;
+  document.getElementById('voucherRefContractGroup').style.display = t === 'contract' ? 'block' : 'none';
+  document.getElementById('voucherRefManualGroup').style.display = t === 'manual' ? 'block' : 'none';
+}
+
+function updateVoucherPreview() {
+  const type = document.getElementById('voucherType').value;
+  const amount = document.getElementById('voucherAmount').value;
+  const desc = document.getElementById('voucherDesc').value.trim();
+  const preview = document.getElementById('voucherPreview');
+  const items = DB.getVouchers();
+  const nextNum = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
+  if (amount) {
+    preview.style.display = 'block';
+    document.getElementById('previewType').textContent = type === 'قبض' ? '📥 سند قبض' : '📤 سند صرف';
+    document.getElementById('previewType').style.color = type === 'قبض' ? 'var(--success)' : 'var(--danger)';
+    document.getElementById('previewNumber').textContent = `SND-${String(nextNum).padStart(4, '0')}`;
+    document.getElementById('previewAmount').textContent = Number(amount).toLocaleString() + ' ر.س';
+    document.getElementById('previewAmount').style.color = type === 'قبض' ? 'var(--success)' : 'var(--danger)';
+    document.getElementById('previewDesc').textContent = desc || '—';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function updateVoucherNumber() {
+  updateVoucherPreview();
 }
 
 function openVoucherForm(data) {
@@ -987,31 +1030,99 @@ function openVoucherForm(data) {
   document.getElementById('voucherDate').value = data?.date || new Date().toISOString().split('T')[0];
   document.getElementById('voucherAmount').value = data?.amount || '';
   document.getElementById('voucherDesc').value = data?.description || '';
-  document.getElementById('voucherRef').value = data?.reference || '';
+  document.getElementById('voucherRefType').value = '';
+  document.getElementById('voucherRefManual').value = data?.reference || '';
+  toggleVoucherRef();
+  // Populate contracts dropdown
+  if (data?.reference && !DB.getContracts().some(c => `عقد #${c.id}` === data.reference)) {
+    document.getElementById('voucherRefType').value = 'manual';
+    toggleVoucherRef();
+  }
+  populateSelect('voucherRefContract', DB.getContracts(), null, 'displayName');
   document.getElementById('modalTitle_voucher').textContent = data ? 'تعديل السند' : 'إضافة سند جديد';
+  updateVoucherPreview();
   openModal('voucherModal');
+  // Live preview on input
+  ['voucherType','voucherAmount','voucherDesc'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateVoucherPreview, { once: false });
+  });
 }
 
 function saveVoucher() {
-  const data = {
-    id: editingId || null,
-    type: document.getElementById('voucherType').value,
-    date: document.getElementById('voucherDate').value,
-    amount: document.getElementById('voucherAmount').value,
-    description: document.getElementById('voucherDesc').value.trim(),
-    reference: document.getElementById('voucherRef').value.trim()
-  };
-  if (!data.date || !data.amount) return alert('الرجاء إدخال التاريخ والمبلغ');
-  DB.saveVoucher(data);
+  const type = document.getElementById('voucherType').value;
+  const date = document.getElementById('voucherDate').value;
+  const amount = document.getElementById('voucherAmount').value;
+  const desc = document.getElementById('voucherDesc').value.trim();
+  let ref = '';
+  const refType = document.getElementById('voucherRefType').value;
+  if (refType === 'contract') {
+    const cid = document.getElementById('voucherRefContract').value;
+    if (cid) ref = `عقد #${cid}`;
+  } else if (refType === 'manual') {
+    ref = document.getElementById('voucherRefManual').value.trim();
+  }
+  if (!date) return alert('الرجاء إدخال التاريخ');
+  if (!amount || Number(amount) <= 0) return alert('الرجاء إدخال مبلغ صحيح');
+  if (!desc) return alert('الرجاء إدخال بيان السند');
+  const data = { id: editingId || null, type, date, amount, description: desc, reference: ref };
+  const saved = DB.saveVoucher(data);
   closeModal('voucherModal');
   renderVouchers();
+  if (currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+}
+
+function editVoucher(id) {
+  const v = DB.getVoucher(id);
+  if (v) openVoucherForm(v);
 }
 
 function deleteVoucher(id) {
-  if (confirm('حذف هذا السند؟')) {
+  if (confirm('هل أنت متأكد من حذف هذا السند؟')) {
     DB.deleteVoucher(id);
     renderVouchers();
+    if (currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
   }
+}
+
+function printVoucher(id) {
+  const v = DB.getVoucher(id);
+  if (!v) return;
+  const org = DB.getOrg(DB.getCurrentOrgId());
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${v.type}</title>
+    <style>
+      body { font-family: 'Segoe UI',sans-serif; padding:0; margin:0; background:#f5f5f5; }
+      .vp { padding:40px; max-width:700px; margin:40px auto; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); border-radius:12px; }
+      .vp-hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #202124; padding-bottom:16px; margin-bottom:24px; }
+      .vp-hdr .t { font-size:28px; font-weight:700; }
+      .vp-hdr .n { font-size:14px; color:#5f6368; font-family:monospace; }
+      .vp-amt { font-size:36px; font-weight:700; text-align:center; padding:24px; background:#f8f9fa; border-radius:12px; margin-bottom:24px; }
+      .vp-desc { font-size:16px; line-height:2; padding:16px; border:1px solid #dadce0; border-radius:8px; min-height:80px; margin-bottom:24px; }
+      .vp-ftr { display:flex; justify-content:space-between; font-size:13px; color:#5f6368; border-top:1px solid #dadce0; padding-top:16px; }
+      .vp-org { text-align:center; margin-bottom:24px; }
+      .vp-org h2 { margin:0; font-size:20px; }
+      .vp-org span { font-size:13px; color:#5f6368; }
+      @media print { body { background:white; } .vp { box-shadow:none; margin:0; border-radius:0; } }
+    </style>
+  </head><body>
+    <div class="vp">
+      <div class="vp-org"><h2>${org ? org.name : 'المؤسسة العقارية'}</h2><span>${org ? org.phone || '' : ''}</span></div>
+      <div class="vp-hdr">
+        <div class="t" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${v.type === 'قبض' ? '📥' : '📤'} سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</div>
+        <div class="n">${v.number || ''}<br><span style="font-size:12px;color:#9aa0a6">${v.date || ''}</span></div>
+      </div>
+      <div class="vp-amt" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${Number(v.amount || 0).toLocaleString()} ر.س</div>
+      <div class="vp-desc">${v.description || '—'}</div>
+      ${v.reference ? `<div style="text-align:center;margin-bottom:16px;color:#5f6368;font-size:14px">المرجع: ${v.reference}</div>` : ''}
+      <div class="vp-ftr">
+        <span>رقم السند: ${v.number || ''}</span>
+        <span>تاريخ الإصدار: ${v.date || ''}</span>
+        <span>🖨️ ${new Date().toLocaleDateString('ar-SA')}</span>
+      </div>
+    </div>
+    <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`);
+  w.document.close();
 }
 
 // ---- Users ----

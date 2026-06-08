@@ -506,6 +506,78 @@ tr:hover {
   gap: 4px;
 }
 
+/* Voucher preview */
+#voucherPreview {
+  border: 1px dashed var(--gray-300);
+  transition: all 0.2s;
+}
+
+.voucher-print {
+  padding: 40px;
+  max-width: 700px;
+  margin: 0 auto;
+  background: white;
+}
+
+.voucher-print .vp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gray-900);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.voucher-print .vp-type {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.voucher-print .vp-number {
+  font-size: 14px;
+  color: var(--gray-500);
+  font-family: monospace;
+}
+
+.voucher-print .vp-body {
+  margin-bottom: 32px;
+}
+
+.voucher-print .vp-amount {
+  font-size: 36px;
+  font-weight: 700;
+  text-align: center;
+  padding: 24px;
+  background: var(--gray-50);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.voucher-print .vp-desc {
+  font-size: 16px;
+  line-height: 2;
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  min-height: 80px;
+  margin-bottom: 24px;
+}
+
+.voucher-print .vp-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--gray-500);
+  border-top: 1px solid var(--gray-200);
+  padding-top: 16px;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .voucher-print, .voucher-print * { visibility: visible; }
+  .voucher-print { position: fixed; inset: 0; }
+}
+
 /* Login */
 .login-overlay {
   position: fixed;
