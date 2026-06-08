@@ -1,0 +1,932 @@
+let currentPage = 'dashboard';
+let editingId = null;
+let currentPropertyId = null;
+
+function init() {
+  DB.init();
+  renderOrgSwitcher();
+  renderAll();
+  setupEvents();
+  showPage('dashboard');
+}
+
+function setupEvents() {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const page = item.dataset.page;
+      if (page === 'back') { showPropertyList(); return; }
+      showPage(page);
+      closeSidebar();
+    });
+  });
+
+  document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', (e) => {
+      if (e.target === m) closeModal(m.id);
+    });
+  });
+}
+
+function renderOrgSwitcher() {
+  const orgs = DB.getOrgs();
+  const current = DB.getOrg(DB.getCurrentOrgId());
+
+  document.getElementById('orgName').textContent = current ? current.name : 'المؤسسة';
+  document.getElementById('orgLogo').textContent = current ? (current.logo || '🏢') : '🏢';
+
+  const menu = document.getElementById('orgMenu');
+  if (orgs.length <= 1) {
+    menu.innerHTML = '';
+    return;
+  }
+  menu.innerHTML = orgs.map(o => `
+    <div class="nav-item" style="padding:8px 20px;font-size:13px;${o.id === DB.getCurrentOrgId() ? 'background:rgba(255,255,255,0.1);color:white' : ''}" onclick="switchOrg(${o.id})">
+      <span>${o.logo || '🏢'}</span> ${o.name}
+    </div>
+  `).join('');
+}
+
+function switchOrg(id) {
+  if (id === DB.getCurrentOrgId()) return;
+  DB.setCurrentOrg(id);
+  renderOrgSwitcher();
+  renderAll();
+  if (currentPage === 'property-detail') { currentPage = 'dashboard'; showPage('dashboard'); }
+  else { showPage(currentPage); }
+  closeSidebar();
+}
+
+function openOrgForm() {
+  editingId = null;
+  document.getElementById('orgId').value = '';
+  document.getElementById('orgNameInput').value = '';
+  document.getElementById('orgLogoInput').value = '🏢';
+  document.getElementById('orgPhone').value = '';
+  document.getElementById('orgEmail').value = '';
+  document.getElementById('modalTitle_org').textContent = 'إضافة مؤسسة جديدة';
+  openModal('orgModal');
+}
+
+function saveOrg() {
+  const data = {
+    id: editingId || null,
+    name: document.getElementById('orgNameInput').value.trim(),
+    logo: document.getElementById('orgLogoInput').value.trim() || '🏢',
+    phone: document.getElementById('orgPhone').value.trim(),
+    email: document.getElementById('orgEmail').value.trim()
+  };
+  if (!data.name) return alert('الرجاء إدخال اسم المؤسسة');
+  const saved = DB.saveOrg(data);
+  if (!editingId) {
+    DB.setCurrentOrg(saved.id);
+    DB.seed();
+  }
+  closeModal('orgModal');
+  renderOrgSwitcher();
+  renderAll();
+  showPage('dashboard');
+}
+
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(`page-${page}`);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (navItem) navItem.classList.add('active');
+
+  if (page === 'property-detail') {
+    document.getElementById('pageTitle').textContent = 'تفاصيل العمارة';
+    document.getElementById('backNavItem').style.display = 'flex';
+  } else {
+    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة' };
+    document.getElementById('pageTitle').textContent = titles[page] || 'لوحة التحكم';
+    document.getElementById('backNavItem').style.display = 'none';
+  }
+
+  renderPage(page);
+}
+
+function renderPage(page) {
+  switch (page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'properties': renderProperties(); break;
+    case 'tenants': renderTenants(); break;
+    case 'contracts': renderContracts(); break;
+    case 'payments': renderPayments(); break;
+    case 'maintenance': renderMaintenance(); break;
+    case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
+  }
+}
+
+function renderAll() {
+  renderDashboard();
+  renderProperties();
+  renderTenants();
+  renderContracts();
+  renderPayments();
+  renderMaintenance();
+}
+
+// ---- Dashboard ----
+function renderDashboard() {
+  const s = DB.getStats();
+  const properties = DB.getProperties();
+  const maintenance = DB.getMaintenance();
+
+  document.getElementById('statProperties').textContent = s.totalProperties;
+  document.getElementById('statTenants').textContent = s.totalTenants;
+  document.getElementById('statContracts').textContent = s.activeContracts;
+  document.getElementById('statPaid').textContent = s.totalPaid.toLocaleString() + ' ر.س';
+  document.getElementById('statDue').textContent = s.totalDue.toLocaleString() + ' ر.س';
+  document.getElementById('statMaintenance').textContent = s.pendingMaintenance;
+  document.getElementById('statUnits').textContent = s.totalUnits;
+  document.getElementById('statYearly').textContent = s.yearlyIncome.toLocaleString() + ' ر.س';
+
+  const propsBody = document.getElementById('dashProperties');
+  if (properties.length === 0) {
+    propsBody.innerHTML = '<div class="empty-state"><div class="icon">🏠</div><p>لا توجد عقارات بعد</p></div>';
+  } else {
+    propsBody.innerHTML = properties.slice(0, 5).map(p => {
+      const stats = DB.getPropertyStats(p.id);
+      return `<div class="stat-card" style="margin-bottom:8px;cursor:pointer" onclick="showPropertyDetail(${p.id})">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600">${p.name}</span>
+          <span class="badge ${p.status === 'مؤجر' ? 'badge-success' : p.status === 'شاغر' ? 'badge-warning' : 'badge-info'}">${p.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--gray-500);margin-top:4px">${p.city} | ${stats.rentedUnits}/${stats.totalUnits} وحدة مؤجرة | دخل سنوي: ${stats.yearlyIncome.toLocaleString()} ر.س</div>
+      </div>`;
+    }).join('');
+  }
+
+  const payBody = document.getElementById('dashPayments');
+  const allInst = DB.getInstallments();
+  const recentInst = [...allInst].filter(i => i.status === 'مدفوع').sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).slice(0, 5);
+  if (recentInst.length === 0) {
+    payBody.innerHTML = '<div class="empty-state"><div class="icon">💰</div><p>لا توجد مدفوعات</p></div>';
+  } else {
+    payBody.innerHTML = recentInst.map(i => {
+      const c = DB.getContract(i.contractId);
+      const prop = c ? DB.getProperty(c.propertyId) : null;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <div style="font-weight:500">${Number(i.amount).toLocaleString()} ر.س</div>
+          <div style="font-size:12px;color:var(--gray-500)">${i.paymentDate} ${prop ? '| ' + prop.name : ''}</div>
+        </div>
+        <span class="badge badge-success">مدفوع</span>
+      </div>`;
+    }).join('');
+  }
+
+  const maintBody = document.getElementById('dashMaintenance');
+  const recentMaint = [...maintenance].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  if (recentMaint.length === 0) {
+    maintBody.innerHTML = '<div class="empty-state"><div class="icon">🔧</div><p>لا توجد طلبات صيانة</p></div>';
+  } else {
+    maintBody.innerHTML = recentMaint.map(m => {
+      const p = DB.getProperty(m.propertyId);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <div style="font-weight:500">${m.title}</div>
+          <div style="font-size:12px;color:var(--gray-500)">${p ? p.name : ''} | ${m.date}</div>
+        </div>
+        <span class="badge ${m.status === 'مكتملة' ? 'badge-success' : m.status === 'قيد التنفيذ' ? 'badge-warning' : 'badge-info'}">${m.status}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ---- Properties ----
+function renderProperties() {
+  const items = DB.getProperties();
+  const container = document.getElementById('propsCardContainer');
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🏠</div><p>لا توجد عقارات. أضف عقاراً جديداً</p></div>';
+    return;
+  }
+  container.innerHTML = items.map(p => {
+    const stats = DB.getPropertyStats(p.id);
+    return `<div class="table-container" style="margin-bottom:16px">
+      <div style="padding:20px;border-bottom:1px solid var(--gray-200)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <span style="font-size:18px;font-weight:700;cursor:pointer;color:var(--primary)" onclick="showPropertyDetail(${p.id})">${p.name}</span>
+            <span style="font-size:13px;color:var(--gray-500);margin-right:12px">${p.type} | ${p.city} | ${p.area} م²</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="badge ${p.status === 'مؤجر' ? 'badge-success' : p.status === 'شاغر' ? 'badge-warning' : 'badge-info'}">${p.status}</span>
+            <button class="btn btn-sm" style="background:var(--primary-light);color:var(--primary)" onclick="openUnitFormForProperty(${p.id})">+ إضافة وحدة</button>
+            <button class="btn btn-sm btn-primary" onclick="showPropertyDetail(${p.id})">تفاصيل</button>
+            <button class="btn-icon" onclick="editProperty(${p.id})" title="تعديل">✏️</button>
+            <button class="btn-icon" onclick="deleteProperty(${p.id})" title="حذف">🗑️</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 20px">
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">💰 الدخل الشهري</div>
+          <div style="font-size:18px;font-weight:700;color:var(--success)">${stats.monthlyIncome.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--gray-500)">ر.س</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">📈 الدخل السنوي</div>
+          <div style="font-size:18px;font-weight:700;color:var(--primary)">${stats.yearlyIncome.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--gray-500)">ر.س</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">⏳ الدفعات القادمة</div>
+          <div style="font-size:18px;font-weight:700;color:var(--warning)">${stats.upcomingPayments.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--gray-500)">ر.س</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">⚠️ المتأخرات</div>
+          <div style="font-size:18px;font-weight:700;color:var(--danger)">${stats.lateTotal.toLocaleString()}</div>
+          <div style="font-size:11px;color:var(--gray-500)">${stats.lateCount} دفعة</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">🏠 الوحدات</div>
+          <div style="font-size:18px;font-weight:700">${stats.rentedUnits}/${stats.totalUnits}</div>
+          <div style="font-size:11px;color:var(--gray-500)">${stats.vacantUnits} شاغر</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--gray-50);border-radius:8px">
+          <div style="font-size:11px;color:var(--gray-500)">🔧 الصيانة</div>
+          <div style="font-size:18px;font-weight:700">${stats.pendingMaintenance}</div>
+          <div style="font-size:11px;color:var(--gray-500)">قيد التنفيذ</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPropertyForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('propId').value = data?.id || '';
+  document.getElementById('propName').value = data?.name || '';
+  document.getElementById('propType').value = data?.type || 'سكني';
+  document.getElementById('propAddress').value = data?.address || '';
+  document.getElementById('propCity').value = data?.city || '';
+  document.getElementById('propArea').value = data?.area || '';
+  document.getElementById('propPrice').value = data?.price || '';
+  document.getElementById('propStatus').value = data?.status || 'شاغر';
+  document.getElementById('propFloors').value = data?.floors || '';
+  document.getElementById('modalTitle_prop').textContent = data ? 'تعديل عقار' : 'إضافة عقار جديد';
+  openModal('propertyModal');
+}
+
+function saveProperty() {
+  const data = {
+    id: editingId || null,
+    name: document.getElementById('propName').value.trim(),
+    type: document.getElementById('propType').value,
+    address: document.getElementById('propAddress').value.trim(),
+    city: document.getElementById('propCity').value.trim(),
+    area: document.getElementById('propArea').value.trim(),
+    price: document.getElementById('propPrice').value.trim(),
+    status: document.getElementById('propStatus').value,
+    floors: document.getElementById('propFloors').value.trim()
+  };
+  if (!data.name) return alert('الرجاء إدخال اسم العقار');
+  DB.saveProperty(data);
+  closeModal('propertyModal');
+  renderProperties();
+  renderDashboard();
+}
+
+function editProperty(id) {
+  const p = DB.getProperty(id);
+  if (p) openPropertyForm(p);
+}
+
+function deleteProperty(id) {
+  if (confirm('هل أنت متأكد من حذف هذا العقار؟')) {
+    DB.deleteProperty(id);
+    renderProperties();
+    renderDashboard();
+  }
+}
+
+// ---- Property Detail ----
+function showPropertyDetail(id) {
+  currentPropertyId = id;
+  showPage('property-detail');
+}
+
+function openUnitFormForProperty(propertyId) {
+  currentPropertyId = propertyId;
+  openUnitForm();
+}
+
+function showPropertyList() {
+  showPage('properties');
+}
+
+function renderPropertyDetail(id) {
+  const p = DB.getProperty(id);
+  if (!p) { showPropertyList(); return; }
+
+  const stats = DB.getPropertyStats(id);
+  const units = DB.getUnitsByProperty(id);
+  const contracts = DB.getContractsByProperty(id);
+  const payments = DB.getPaymentsByProperty(id);
+  const maintenance = DB.getMaintenanceByProperty(id);
+
+  // رأس العمارة
+  document.getElementById('detailHeader').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-size:24px;margin-bottom:4px">${p.name}</h2>
+        <div style="color:var(--gray-500);font-size:14px">
+          ${p.city} | ${p.address ? p.address + ' | ' : ''}${p.type} | ${p.area} م²
+          ${p.floors ? ' | ' + p.floors + ' أدوار' : ''}
+        </div>
+      </div>
+      <span class="badge ${p.status === 'مؤجر' ? 'badge-success' : p.status === 'شاغر' ? 'badge-warning' : 'badge-info'}" style="font-size:14px;padding:6px 16px">${p.status}</span>
+    </div>
+  `;
+
+  // بطاقات الإحصائيات المالية
+  document.getElementById('detailStats').innerHTML = `
+    <div class="stat-card">
+      <div class="label">💰 الدخل الشهري</div>
+      <div class="value" style="color:var(--success)">${stats.monthlyIncome.toLocaleString()} ر.س</div>
+      <div class="sub">الشهر الحالي</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">📈 الدخل السنوي</div>
+      <div class="value" style="color:var(--primary)">${stats.yearlyIncome.toLocaleString()} ر.س</div>
+      <div class="sub">السنة الحالية</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">⏳ الدفعات القادمة</div>
+      <div class="value" style="color:var(--warning)">${stats.upcomingPayments.toLocaleString()} ر.س</div>
+      <div class="sub">استحقاق العقود النشطة</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">⚠️ الدفعات المتأخرة</div>
+      <div class="value" style="color:var(--danger)">${stats.lateTotal.toLocaleString()} ر.س</div>
+      <div class="sub">${stats.lateCount} دفعة متأخرة</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">🏠 الوحدات</div>
+      <div class="value">${stats.rentedUnits}/${stats.totalUnits}</div>
+      <div class="sub">${stats.vacantUnits} وحدة شاغرة</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">📄 العقود النشطة</div>
+      <div class="value">${stats.activeContracts}</div>
+      <div class="sub">${stats.totalUnits > 0 ? Math.round(stats.rentedUnits/stats.totalUnits*100) : 0}% إشغال</div>
+    </div>
+  `;
+
+  // الوحدات
+  const unitsBody = document.getElementById('detailUnits');
+  if (units.length === 0) {
+    unitsBody.innerHTML = '<div class="empty-state"><div class="icon">🚪</div><p>لا توجد وحدات مضافة. أضف الوحدات (شقق/محلات) لهذه العمارة</p></div>';
+  } else {
+    unitsBody.innerHTML = `<table>
+      <thead><tr><th>الوحدة</th><th>النوع</th><th>المساحة</th><th>الإيجار</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>${units.map(u => {
+        const contract = contracts.find(c => c.unitId === u.id && c.status === 'نشط');
+        const tenant = contract ? DB.getTenant(contract.tenantId) : null;
+        return `<tr>
+          <td>
+            <strong>${u.name}</strong>
+            ${tenant ? '<br><span style="font-size:12px;color:var(--gray-500)">' + tenant.name + '</span>' : ''}
+            ${contract && contract.status === 'نشط' ? '<br><span style="font-size:11px;color:var(--gray-500)">عقد #' + contract.id + '</span>' : ''}
+          </td>
+          <td>${u.type}</td>
+          <td>${u.area} م²</td>
+          <td>${Number(u.rentAmount).toLocaleString()} ر.س</td>
+          <td><span class="badge ${u.status === 'مؤجر' ? 'badge-success' : 'badge-warning'}">${u.status}</span></td>
+          <td><div class="actions">
+            ${u.status === 'شاغر' ? `<button class="btn btn-sm" style="background:var(--primary-light);color:var(--primary)" onclick="openContractForUnit(${u.id}, ${p.id})">📄 إبرام عقد</button>` : ''}
+            <button class="btn-icon" onclick="editUnit(${u.id})" title="تعديل">✏️</button>
+            <button class="btn-icon" onclick="deleteUnit(${u.id})" title="حذف">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+  document.getElementById('detailUnitsCount').textContent = units.length;
+
+  // العقود
+  const contractsBody = document.getElementById('detailContracts');
+  if (contracts.length === 0) {
+    contractsBody.innerHTML = '<div class="empty-state"><div class="icon">📄</div><p>لا توجد عقود لهذه العمارة</p></div>';
+  } else {
+    contractsBody.innerHTML = contracts.map(c => {
+      const unit = DB.getUnit(c.unitId);
+      const tenant = DB.getTenant(c.tenantId);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <div style="font-weight:500">${unit ? unit.name : 'عقد #' + c.id} - ${tenant ? tenant.name : ''}</div>
+          <div style="font-size:12px;color:var(--gray-500)">${c.startDate} → ${c.endDate} | ${Number(c.rentAmount).toLocaleString()} ر.س/${c.paymentFrequency || 'شهري'}</div>
+        </div>
+        <span class="badge ${c.status === 'نشط' ? 'badge-success' : 'badge-danger'}">${c.status}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // الأقساط
+  const instByProp = DB.getInstallmentsByProperty(id);
+  const payBody = document.getElementById('detailPayments');
+  if (instByProp.length === 0) {
+    payBody.innerHTML = '<div class="empty-state"><div class="icon">💰</div><p>لا توجد أقساط لهذه العمارة</p></div>';
+  } else {
+    payBody.innerHTML = `<table>
+      <thead><tr><th>تاريخ الاستحقاق</th><th>الوحدة</th><th>المبلغ</th><th>تاريخ الدفع</th><th>طريقة الدفع</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>${[...instByProp].sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate)).map(i => {
+      const c = DB.getContract(i.contractId);
+      const u = c ? DB.getUnit(c.unitId) : null;
+      const isOverdue = i.status === 'قادم' && new Date(i.dueDate) < new Date(new Date().toISOString().split('T')[0]);
+      const badgeClass = i.status === 'مدفوع' ? 'badge-success' : isOverdue ? 'badge-danger' : 'badge-warning';
+      const statusText = i.status === 'مدفوع' ? 'مدفوع' : isOverdue ? 'متأخر' : 'قادم';
+      return `<tr>
+        <td>${i.dueDate}</td>
+        <td>${u ? u.name : '-'}</td>
+        <td>${Number(i.amount).toLocaleString()} ر.س</td>
+        <td>${i.paymentDate || '-'}</td>
+        <td>${i.paymentMethod || '-'}</td>
+        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+        <td>${i.status !== 'مدفوع' ? `<button class="btn btn-sm btn-success" onclick="openPaymentForm(${i.id})">تسديد</button>` : ''}</td>
+      </tr>`;
+    }).join('')}</tbody>
+    </table>`;
+  }
+
+  // الصيانة
+  const maintBody = document.getElementById('detailMaintenance');
+  if (maintenance.length === 0) {
+    maintBody.innerHTML = '<div class="empty-state"><div class="icon">🔧</div><p>لا توجد طلبات صيانة</p></div>';
+  } else {
+    maintBody.innerHTML = maintenance.map(m => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <div style="font-weight:500">${m.title}</div>
+          <div style="font-size:12px;color:var(--gray-500)">${m.date} | ${Number(m.cost).toLocaleString()} ر.س</div>
+        </div>
+        <span class="badge ${m.status === 'مكتملة' ? 'badge-success' : m.status === 'قيد التنفيذ' ? 'badge-warning' : 'badge-info'}">${m.status}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ---- Units ----
+function openUnitForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('unitId').value = data?.id || '';
+  document.getElementById('unitPropertyId').value = currentPropertyId;
+  document.getElementById('unitName').value = data?.name || '';
+  document.getElementById('unitType').value = data?.type || 'شقة';
+  document.getElementById('unitArea').value = data?.area || '';
+  document.getElementById('unitRent').value = data?.rentAmount || '';
+  document.getElementById('unitStatus').value = data?.status || 'شاغر';
+  document.getElementById('modalTitle_unit').textContent = data ? 'تعديل وحدة' : 'إضافة وحدة جديدة';
+  openModal('unitModal');
+}
+
+function saveUnit() {
+  const data = {
+    id: editingId || null,
+    propertyId: currentPropertyId,
+    name: document.getElementById('unitName').value.trim(),
+    type: document.getElementById('unitType').value,
+    area: document.getElementById('unitArea').value.trim(),
+    rentAmount: document.getElementById('unitRent').value.trim(),
+    status: document.getElementById('unitStatus').value
+  };
+  if (!data.name) return alert('الرجاء إدخال اسم الوحدة');
+  DB.saveUnit(data);
+  closeModal('unitModal');
+  renderPropertyDetail(currentPropertyId);
+  renderProperties();
+  renderDashboard();
+}
+
+function editUnit(id) {
+  const u = DB.getUnit(id);
+  if (u) openUnitForm(u);
+}
+
+function deleteUnit(id) {
+  if (confirm('هل أنت متأكد من حذف هذه الوحدة؟')) {
+    DB.deleteUnit(id);
+    renderPropertyDetail(currentPropertyId);
+    renderProperties();
+    renderDashboard();
+  }
+}
+
+function openContractForUnit(unitId, propertyId) {
+  currentPropertyId = propertyId;
+  openContractForm({ unitId, propertyId });
+}
+
+// ---- Tenants ----
+function renderTenants() {
+  const items = DB.getTenants();
+  const tbody = document.getElementById('tenantsTableBody');
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">👤</div><p>لا يوجد مستأجرين. أضف مستأجراً جديداً</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(t => `<tr>
+    <td>${t.name}</td>
+    <td>${t.phone}</td>
+    <td>${t.email}</td>
+    <td>${t.identity}</td>
+    <td><div class="actions">
+      <button class="btn-icon" onclick="editTenant(${t.id})" title="تعديل">✏️</button>
+      <button class="btn-icon" onclick="deleteTenant(${t.id})" title="حذف">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openTenantForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('tenantId').value = data?.id || '';
+  document.getElementById('tenantName').value = data?.name || '';
+  document.getElementById('tenantPhone').value = data?.phone || '';
+  document.getElementById('tenantEmail').value = data?.email || '';
+  document.getElementById('tenantIdentity').value = data?.identity || '';
+  document.getElementById('modalTitle_tenant').textContent = data ? 'تعديل مستأجر' : 'إضافة مستأجر جديد';
+  openModal('tenantModal');
+}
+
+function saveTenant() {
+  const data = {
+    id: editingId || null,
+    name: document.getElementById('tenantName').value.trim(),
+    phone: document.getElementById('tenantPhone').value.trim(),
+    email: document.getElementById('tenantEmail').value.trim(),
+    identity: document.getElementById('tenantIdentity').value.trim()
+  };
+  if (!data.name) return alert('الرجاء إدخال اسم المستأجر');
+  DB.saveTenant(data);
+  closeModal('tenantModal');
+  renderTenants();
+  renderDashboard();
+}
+
+function editTenant(id) {
+  const t = DB.getTenant(id);
+  if (t) openTenantForm(t);
+}
+
+function deleteTenant(id) {
+  if (confirm('هل أنت متأكد من حذف هذا المستأجر؟')) {
+    DB.deleteTenant(id);
+    renderTenants();
+    renderDashboard();
+  }
+}
+
+// ---- Contracts ----
+function renderContracts() {
+  const items = DB.getContracts();
+  const tbody = document.getElementById('contractsTableBody');
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📄</div><p>لا توجد عقود. أضف عقداً جديداً</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(c => {
+    const prop = DB.getProperty(c.propertyId);
+    const unit = DB.getUnit(c.unitId);
+    const tenant = DB.getTenant(c.tenantId);
+    return `<tr>
+      <td>#${c.id}</td>
+      <td>${prop ? prop.name : '-'} ${unit ? '| ' + unit.name : ''}</td>
+      <td>${tenant ? tenant.name : '-'}</td>
+      <td>${c.startDate}</td>
+      <td>${c.endDate}</td>
+      <td>${Number(c.rentAmount).toLocaleString()} ر.س</td>
+      <td>${c.paymentFrequency || 'شهري'}</td>
+      <td><span class="badge ${c.status === 'نشط' ? 'badge-success' : c.status === 'منتهي' ? 'badge-danger' : 'badge-warning'}">${c.status}</span></td>
+      <td><div class="actions">
+        <button class="btn-icon" onclick="editContract(${c.id})" title="تعديل">✏️</button>
+        <button class="btn-icon" onclick="deleteContract(${c.id})" title="حذف">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function openContractForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('contractId').value = data?.id || '';
+
+  const propEl = document.getElementById('contractProperty');
+  const newPropEl = propEl.cloneNode(true);
+  propEl.parentNode.replaceChild(newPropEl, propEl);
+
+  populateSelect('contractProperty', DB.getProperties(), data?.propertyId);
+  populateUnitsByProperty('contractUnit', data?.propertyId, data?.unitId);
+  document.getElementById('contractProperty').addEventListener('change', function() {
+    populateUnitsByProperty('contractUnit', Number(this.value));
+  });
+
+  populateSelect('contractTenant', DB.getTenants(), data?.tenantId);
+  document.getElementById('contractStart').value = data?.startDate || '';
+  document.getElementById('contractDuration').value = data?.duration || '12';
+  document.getElementById('contractEnd').value = data?.endDate || '';
+  document.getElementById('contractPayment').value = data?.paymentFrequency || 'شهري';
+  document.getElementById('contractRent').value = data?.rentAmount || '';
+
+  document.getElementById('contractStatus').value = data?.status || 'نشط';
+
+  if (data?.unitId && !data?.id) {
+    const unit = DB.getUnit(data.unitId);
+    const prop = DB.getProperty(data.propertyId);
+    document.getElementById('modalTitle_contract').textContent = `إبرام عقد - ${prop ? prop.name : ''} | ${unit ? unit.name : ''}`;
+    if (unit && unit.rentAmount) {
+      document.getElementById('contractRent').value = unit.rentAmount;
+    }
+  } else {
+    document.getElementById('modalTitle_contract').textContent = data ? 'تعديل عقد' : 'إضافة عقد جديد';
+  }
+
+  if (data?.startDate && data?.duration) {
+    calculateEndDate();
+  }
+  openModal('contractModal');
+}
+
+function calculateEndDate() {
+  const startStr = document.getElementById('contractStart').value;
+  const duration = parseInt(document.getElementById('contractDuration').value) || 0;
+  if (!startStr || !duration) {
+    document.getElementById('contractEnd').value = '';
+    return;
+  }
+  const start = new Date(startStr);
+  start.setMonth(start.getMonth() + duration);
+  const year = start.getFullYear();
+  const month = String(start.getMonth() + 1).padStart(2, '0');
+  const day = String(start.getDate()).padStart(2, '0');
+  document.getElementById('contractEnd').value = `${year}-${month}-${day}`;
+}
+
+function populateUnitsByProperty(selectId, propertyId, selectedId) {
+  const sel = document.getElementById(selectId);
+  if (!propertyId) { sel.innerHTML = '<option value="">-- اختر العقار أولاً --</option>'; return; }
+  const units = DB.getUnitsByProperty(propertyId);
+  sel.innerHTML = '<option value="">-- اختر الوحدة --</option>'
+    + units.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name} - ${Number(u.rentAmount).toLocaleString()} ر.س (${u.status})</option>`).join('');
+}
+
+function saveContract() {
+  calculateEndDate();
+  const data = {
+    id: editingId || null,
+    propertyId: Number(document.getElementById('contractProperty').value),
+    unitId: Number(document.getElementById('contractUnit').value) || null,
+    tenantId: Number(document.getElementById('contractTenant').value),
+    startDate: document.getElementById('contractStart').value,
+    endDate: document.getElementById('contractEnd').value,
+    duration: parseInt(document.getElementById('contractDuration').value) || 12,
+    paymentFrequency: document.getElementById('contractPayment').value,
+    rentAmount: document.getElementById('contractRent').value.trim(),
+
+    status: document.getElementById('contractStatus').value
+  };
+  if (!data.propertyId || !data.tenantId) return alert('الرجاء اختيار العقار والمستأجر');
+  if (!data.startDate || !data.endDate) return alert('الرجاء إدخال تاريخ البداية والمدة');
+  DB.saveContract(data);
+
+  if (data.status === 'نشط') {
+    const p = DB.getProperty(data.propertyId);
+    if (p && p.status !== 'مؤجر') {
+      p.status = 'مؤجر';
+      DB.saveProperty(p);
+    }
+    if (data.unitId) {
+      const u = DB.getUnit(data.unitId);
+      if (u && u.status !== 'مؤجر') {
+        u.status = 'مؤجر';
+        DB.saveUnit(u);
+      }
+    }
+  }
+
+  closeModal('contractModal');
+  renderContracts();
+  renderDashboard();
+}
+
+function editContract(id) {
+  const c = DB.getContract(id);
+  if (c) openContractForm(c);
+}
+
+function deleteContract(id) {
+  if (confirm('هل أنت متأكد من حذف هذا العقد؟')) {
+    DB.deleteContract(id);
+    renderContracts();
+    renderDashboard();
+  }
+}
+
+// ---- Payments (نظام الأقساط) ----
+function renderPayments() {
+  const items = DB.getInstallments();
+  const today = new Date(new Date().toISOString().split('T')[0]);
+  const container = document.getElementById('paymentsContainer');
+
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">💰</div><p>لا توجد أقساط. يتم إنشاؤها تلقائياً عند إبرام عقد جديد</p></div>';
+    return;
+  }
+
+  const totalPaid = items.filter(i => i.status === 'مدفوع').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const totalDue = items.filter(i => i.status === 'متأخر' || (i.status === 'قادم' && new Date(i.dueDate) < today)).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const totalPending = items.filter(i => i.status === 'قادم' && new Date(i.dueDate) >= today).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+
+  container.innerHTML = `
+    <div class="stats-grid" style="margin-bottom:16px">
+      <div class="stat-card"><div class="label">✅ مدفوع</div><div class="value" style="color:var(--success)">${totalPaid.toLocaleString()} ر.س</div></div>
+      <div class="stat-card"><div class="label">⚠️ متأخر</div><div class="value" style="color:var(--danger)">${totalDue.toLocaleString()} ر.س</div></div>
+      <div class="stat-card"><div class="label">⏳ قادم</div><div class="value" style="color:var(--warning)">${totalPending.toLocaleString()} ر.س</div></div>
+    </div>
+    <div class="table-container">
+      <div class="table-header"><h3>جدول الأقساط</h3></div>
+      <table>
+        <thead><tr><th>#</th><th>العقد</th><th>العقار</th><th>الوحدة</th><th>المبلغ</th><th>تاريخ الاستحقاق</th><th>تاريخ الدفع</th><th>طريقة الدفع</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>${items.sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate)).map(i => {
+          const c = DB.getContract(i.contractId);
+          const prop = c ? DB.getProperty(c.propertyId) : null;
+          const unit = c ? DB.getUnit(c.unitId) : null;
+          const isOverdue = i.status === 'قادم' && new Date(i.dueDate) < today;
+          const badgeClass = i.status === 'مدفوع' ? 'badge-success' : isOverdue ? 'badge-danger' : 'badge-warning';
+          const statusText = i.status === 'مدفوع' ? 'مدفوع' : isOverdue ? 'متأخر' : 'قادم';
+          return `<tr>
+            <td>#${i.id}</td>
+            <td>عقد #${c ? c.id : '-'}</td>
+            <td>${prop ? prop.name : '-'}</td>
+            <td>${unit ? unit.name : '-'}</td>
+            <td>${Number(i.amount).toLocaleString()} ر.س</td>
+            <td>${i.dueDate}</td>
+            <td>${i.paymentDate || '-'}</td>
+            <td>${i.paymentMethod || '-'}</td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+            <td>${i.status !== 'مدفوع' ? `<button class="btn btn-sm btn-success" onclick="openPaymentForm(${i.id})">تسديد</button>` : `<button class="btn btn-sm" style="background:var(--gray-100)" onclick="openPaymentForm(${i.id})">عرض</button>`}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function openPaymentForm(installmentId) {
+  const inst = DB.getInstallments().find(i => i.id === installmentId);
+  if (!inst) return;
+  editingId = installmentId;
+  document.getElementById('payInstId').value = inst.id;
+  const c = DB.getContract(inst.contractId);
+  const prop = c ? DB.getProperty(c.propertyId) : null;
+  const unit = c ? DB.getUnit(c.unitId) : null;
+  document.getElementById('payInfo').textContent = `${prop ? prop.name : ''} | ${unit ? unit.name : ''} | ${inst.dueDate} | ${Number(inst.amount).toLocaleString()} ر.س`;
+  if (inst.status === 'مدفوع') {
+    document.getElementById('payAmount').value = inst.amount;
+    document.getElementById('payDate').value = inst.paymentDate;
+    document.getElementById('payMethod').value = inst.paymentMethod;
+    document.getElementById('payNotes').value = inst.notes || '';
+    document.getElementById('paySaveBtn').style.display = 'none';
+    document.getElementById('payUnpaidBtn').style.display = 'inline-flex';
+  } else {
+    document.getElementById('payAmount').value = inst.amount;
+    document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('payMethod').value = 'نقدي';
+    document.getElementById('payNotes').value = '';
+    document.getElementById('paySaveBtn').style.display = 'inline-flex';
+    document.getElementById('payUnpaidBtn').style.display = 'none';
+  }
+  document.getElementById('modalTitle_pay').textContent = inst.status === 'مدفوع' ? 'تفاصيل الدفعة' : 'تسديد القسط';
+  openModal('paymentModal');
+}
+
+function savePayment() {
+  const id = Number(document.getElementById('payInstId').value);
+  const inst = DB.getInstallments().find(i => i.id === id);
+  if (!inst) return;
+  inst.status = 'مدفوع';
+  inst.paymentDate = document.getElementById('payDate').value;
+  inst.paymentMethod = document.getElementById('payMethod').value;
+  inst.notes = document.getElementById('payNotes').value.trim();
+  DB.saveInstallment(inst);
+  closeModal('paymentModal');
+  renderPayments();
+  renderDashboard();
+  const p = document.getElementById(`page-${currentPage}`);
+  if (p && currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+}
+
+function markUnpaid() {
+  const id = Number(document.getElementById('payInstId').value);
+  const inst = DB.getInstallments().find(i => i.id === id);
+  if (!inst) return;
+  const today = new Date(new Date().toISOString().split('T')[0]);
+  inst.status = new Date(inst.dueDate) < today ? 'متأخر' : 'قادم';
+  inst.paymentDate = '';
+  inst.paymentMethod = '';
+  inst.notes = '';
+  DB.saveInstallment(inst);
+  closeModal('paymentModal');
+  renderPayments();
+  renderDashboard();
+  if (currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+}
+
+// ---- Maintenance ----
+function renderMaintenance() {
+  const items = DB.getMaintenance();
+  const tbody = document.getElementById('maintenanceTableBody');
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">🔧</div><p>لا توجد طلبات صيانة. أضف طلباً جديداً</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(m => {
+    const p = DB.getProperty(m.propertyId);
+    return `<tr>
+      <td>${m.title}</td>
+      <td>${p ? p.name : '-'}</td>
+      <td>${m.description.substring(0, 40)}${m.description.length > 40 ? '...' : ''}</td>
+      <td>${Number(m.cost).toLocaleString()} ر.س</td>
+      <td>${m.date}</td>
+      <td><span class="badge ${m.status === 'مكتملة' ? 'badge-success' : m.status === 'قيد التنفيذ' ? 'badge-warning' : 'badge-info'}">${m.status}</span></td>
+      <td><div class="actions">
+        <button class="btn-icon" onclick="editMaintenance(${m.id})" title="تعديل">✏️</button>
+        <button class="btn-icon" onclick="deleteMaintenance(${m.id})" title="حذف">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function openMaintenanceForm(data) {
+  editingId = data?.id || null;
+  document.getElementById('maintId').value = data?.id || '';
+  populateSelect('maintProperty', DB.getProperties(), data?.propertyId);
+  document.getElementById('maintTitle').value = data?.title || '';
+  document.getElementById('maintDesc').value = data?.description || '';
+  document.getElementById('maintCost').value = data?.cost || '';
+  document.getElementById('maintDate').value = data?.date || new Date().toISOString().split('T')[0];
+  document.getElementById('maintStatus').value = data?.status || 'مجدولة';
+  document.getElementById('modalTitle_maint').textContent = data ? 'تعديل طلب صيانة' : 'إضافة طلب صيانة جديد';
+  openModal('maintenanceModal');
+}
+
+function saveMaintenance() {
+  const data = {
+    id: editingId || null,
+    propertyId: Number(document.getElementById('maintProperty').value),
+    title: document.getElementById('maintTitle').value.trim(),
+    description: document.getElementById('maintDesc').value.trim(),
+    cost: document.getElementById('maintCost').value.trim(),
+    date: document.getElementById('maintDate').value,
+    status: document.getElementById('maintStatus').value
+  };
+  if (!data.title || !data.propertyId) return alert('الرجاء إدخال عنوان الطلب واختيار العقار');
+  DB.saveMaintenance(data);
+  closeModal('maintenanceModal');
+  renderMaintenance();
+  renderDashboard();
+}
+
+function editMaintenance(id) {
+  const m = DB.getMaintenanceItem(id);
+  if (m) openMaintenanceForm(m);
+}
+
+function deleteMaintenance(id) {
+  if (confirm('هل أنت متأكد من حذف طلب الصيانة هذا؟')) {
+    DB.deleteMaintenance(id);
+    renderMaintenance();
+    renderDashboard();
+  }
+}
+
+// ---- Helpers ----
+function populateSelect(id, items, selectedId, labelKey = 'name') {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">-- اختر --</option>'
+    + items.map(i => `<option value="${i.id}" ${i.id === selectedId ? 'selected' : ''}>${i[labelKey]}</option>`).join('');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editingId = null;
+}
+
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+}
+
+document.addEventListener('DOMContentLoaded', init);

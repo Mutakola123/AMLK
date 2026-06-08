@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة الأملاك العقارية</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header" style="cursor:pointer" onclick="openOrgForm()" title="إدارة المؤسسات">
+    <h2><span id="orgLogo">🏢</span> <span id="orgName">المؤسسة</span></h2>
+    <span>نظام متابعة العقارات</span>
+  </div>
+  <div id="orgMenu"></div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" data-page="dashboard">
+      <span class="icon">📊</span> لوحة التحكم
+    </div>
+    <div class="nav-item" data-page="properties">
+      <span class="icon">🏠</span> العقارات
+    </div>
+    <div class="nav-item" data-page="tenants">
+      <span class="icon">👤</span> المستأجرين
+    </div>
+    <div class="nav-item" data-page="contracts">
+      <span class="icon">📄</span> العقود
+    </div>
+    <div class="nav-item" data-page="payments">
+      <span class="icon">💰</span> المدفوعات
+    </div>
+    <div class="nav-item" data-page="maintenance">
+      <span class="icon">🔧</span> الصيانة
+    </div>
+    <div class="nav-item" data-page="back" style="display:none;border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:12px" id="backNavItem">
+      <span class="icon">🔙</span> رجوع
+    </div>
+  </nav>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+  <header class="header">
+    <h1 id="pageTitle">لوحة التحكم</h1>
+    <div class="header-actions">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+    </div>
+  </header>
+
+  <div class="page-content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">🏠 العقارات</div><div class="value" id="statProperties">0</div><div class="sub">إجمالي العقارات</div></div>
+        <div class="stat-card"><div class="label">👤 المستأجرين</div><div class="value" id="statTenants">0</div><div class="sub">إجمالي المستأجرين</div></div>
+        <div class="stat-card"><div class="label">📄 العقود النشطة</div><div class="value" id="statContracts">0</div><div class="sub">عقود سارية</div></div>
+        <div class="stat-card"><div class="label">✅ مدفوعات</div><div class="value" id="statPaid">0 ر.س</div><div class="sub">إجمالي المدفوعات</div></div>
+        <div class="stat-card"><div class="label">⚠️ متأخرات</div><div class="value" id="statDue">0 ر.س</div><div class="sub">مدفوعات متأخرة</div></div>
+        <div class="stat-card"><div class="label">🔧 الصيانة</div><div class="value" id="statMaintenance">0</div><div class="sub">طلبات قيد التنفيذ</div></div>
+        <div class="stat-card"><div class="label">🚪 الوحدات</div><div class="value" id="statUnits">0</div><div class="sub">إجمالي الوحدات</div></div>
+        <div class="stat-card"><div class="label">📈 الدخل السنوي</div><div class="value" id="statYearly">0 ر.س</div><div class="sub">السنة الحالية</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="table-container">
+          <div class="table-header"><h3>أحدث العقارات</h3></div>
+          <div id="dashProperties"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>آخر المدفوعات</h3></div>
+          <div id="dashPayments"></div>
+        </div>
+        <div class="table-container" style="grid-column:1/-1">
+          <div class="table-header"><h3>طلبات الصيانة</h3></div>
+          <div id="dashMaintenance"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Properties -->
+    <div class="page" id="page-properties">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="font-size:18px">قائمة العقارات</h3>
+        <button class="btn btn-primary" onclick="openPropertyForm()">+ إضافة عقار</button>
+      </div>
+      <div id="propsCardContainer"></div>
+    </div>
+
+    <!-- Tenants -->
+    <div class="page" id="page-tenants">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>قائمة المستأجرين</h3>
+          <button class="btn btn-primary" onclick="openTenantForm()">+ إضافة مستأجر</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>الاسم</th><th>الجوال</th><th>البريد</th><th>رقم الهوية</th><th></th></tr>
+          </thead>
+          <tbody id="tenantsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contracts -->
+    <div class="page" id="page-contracts">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>قائمة العقود</h3>
+          <button class="btn btn-primary" onclick="openContractForm()">+ إضافة عقد</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>رقم العقد</th><th>العقار</th><th>المستأجر</th><th>تاريخ البداية</th><th>تاريخ النهاية</th><th>الإيجار</th><th>الدفع</th><th>الحالة</th><th></th></tr>
+          </thead>
+          <tbody id="contractsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payments -->
+    <div class="page" id="page-payments">
+      <div id="paymentsContainer"></div>
+    </div>
+
+    <!-- Maintenance -->
+    <div class="page" id="page-maintenance">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>طلبات الصيانة</h3>
+          <button class="btn btn-primary" onclick="openMaintenanceForm()">+ إضافة طلب</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>الطلب</th><th>العقار</th><th>الوصف</th><th>التكلفة</th><th>التاريخ</th><th>الحالة</th><th></th></tr>
+          </thead>
+          <tbody id="maintenanceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Property Detail -->
+    <div class="page" id="page-property-detail">
+      <div style="margin-bottom:20px">
+        <button class="btn" style="background:var(--gray-100)" onclick="showPropertyList()">🔙 رجوع إلى العقارات</button>
+      </div>
+
+      <div class="table-container" style="margin-bottom:16px">
+        <div class="table-header"><h3>معلومات العمارة</h3></div>
+        <div id="detailHeader" style="padding:20px"></div>
+      </div>
+
+      <div class="stats-grid" id="detailStats" style="margin-bottom:16px"></div>
+
+      <div class="table-container" style="margin-bottom:16px">
+        <div class="table-header">
+          <h3>الوحدات <span id="detailUnitsCount" style="color:var(--gray-500)">0</span></h3>
+          <button class="btn btn-primary" onclick="openUnitForm()">+ إضافة وحدة</button>
+        </div>
+        <div id="detailUnits"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="table-container">
+          <div class="table-header"><h3>العقود</h3></div>
+          <div id="detailContracts" style="padding:0 20px"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>المدفوعات</h3></div>
+          <div id="detailPayments" style="padding:0 20px"></div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header"><h3>الصيانة</h3></div>
+        <div id="detailMaintenance" style="padding:0 20px"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Property Modal -->
+<div class="modal-overlay" id="propertyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_prop">إضافة عقار جديد</h3>
+      <button class="modal-close" onclick="closeModal('propertyModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="propId">
+      <div class="form-group">
+        <label>اسم العقار</label>
+        <input type="text" id="propName" placeholder="مثال: عمارة النور">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>نوع العقار</label>
+          <select id="propType"><option>سكني</option><option>تجاري</option><option>مكتبي</option><option>أرض</option></select>
+        </div>
+        <div class="form-group">
+          <label>الحالة</label>
+          <select id="propStatus"><option>شاغر</option><option>مؤجر</option><option>قيد الإنشاء</option><option>تحت الصيانة</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>العنوان</label>
+        <input type="text" id="propAddress" placeholder="الشارع - الحي">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>المدينة</label>
+          <input type="text" id="propCity" placeholder="مثال: الرياض">
+        </div>
+        <div class="form-group">
+          <label>المساحة (م²)</label>
+          <input type="number" id="propArea" placeholder="مثال: 500">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>السعر (ر.س)</label>
+          <input type="number" id="propPrice" placeholder="مثال: 500000">
+        </div>
+        <div class="form-group">
+          <label>عدد الأدوار</label>
+          <input type="number" id="propFloors" placeholder="مثال: 5">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveProperty()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('propertyModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tenant Modal -->
+<div class="modal-overlay" id="tenantModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_tenant">إضافة مستأجر جديد</h3>
+      <button class="modal-close" onclick="closeModal('tenantModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tenantId">
+      <div class="form-group">
+        <label>الاسم الكامل</label>
+        <input type="text" id="tenantName" placeholder="مثال: أحمد محمد">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>رقم الجوال</label>
+          <input type="text" id="tenantPhone" placeholder="05xxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني</label>
+          <input type="email" id="tenantEmail" placeholder="example@email.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>رقم الهوية</label>
+        <input type="text" id="tenantIdentity" placeholder="رقم الهوية الوطنية">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveTenant()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('tenantModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contract Modal -->
+<div class="modal-overlay" id="contractModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_contract">إضافة عقد جديد</h3>
+      <button class="modal-close" onclick="closeModal('contractModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="contractId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>العقار</label>
+          <select id="contractProperty"></select>
+        </div>
+        <div class="form-group">
+          <label>الوحدة</label>
+          <select id="contractUnit"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>المستأجر</label>
+        <select id="contractTenant"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>تاريخ البداية</label>
+          <input type="date" id="contractStart" onchange="calculateEndDate()">
+        </div>
+        <div class="form-group">
+          <label>المدة (شهر)</label>
+          <input type="number" id="contractDuration" placeholder="مثال: 12" value="12" onchange="calculateEndDate()" oninput="calculateEndDate()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>تاريخ النهاية</label>
+          <input type="date" id="contractEnd" readonly style="background:var(--gray-50);color:var(--gray-700)">
+        </div>
+        <div class="form-group">
+          <label>طريقة الدفع</label>
+          <select id="contractPayment">
+            <option value="شهري">شهري</option>
+            <option value="ربع سنوي">ربع سنوي</option>
+            <option value="نصف سنوي">نصف سنوي</option>
+            <option value="سنوي">سنوي</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>مبلغ الإيجار (ر.س)</label>
+          <input type="number" id="contractRent" placeholder="مثال: 15000">
+        </div>
+
+      </div>
+      <div class="form-group">
+        <label>الحالة</label>
+        <select id="contractStatus"><option>نشط</option><option>منتهي</option><option>ملغي</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveContract()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('contractModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment / Installment Modal -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3 id="modalTitle_pay">تسديد القسط</h3>
+      <button class="modal-close" onclick="closeModal('paymentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="payInstId">
+      <div style="background:var(--gray-50);padding:16px;border-radius:8px;margin-bottom:16px;text-align:center" id="payInfo"></div>
+      <div class="form-group">
+        <label>المبلغ (ر.س)</label>
+        <input type="number" id="payAmount" readonly style="background:var(--gray-50);font-weight:700;font-size:18px">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>تاريخ الدفع</label>
+          <input type="date" id="payDate">
+        </div>
+        <div class="form-group">
+          <label>طريقة الدفع</label>
+          <select id="payMethod"><option>نقدي</option><option>تحويل بنكي</option><option>شيك</option><option>بطاقة ائتمان</option></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ملاحظات</label>
+        <textarea id="payNotes" rows="2" placeholder="ملاحظات"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success" id="paySaveBtn" onclick="savePayment()">✅ تأكيد الدفع</button>
+      <button class="btn" style="background:var(--gray-100)" id="payUnpaidBtn" onclick="markUnpaid()">⏪ إلغاء الدفع</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('paymentModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal-overlay" id="maintenanceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_maint">إضافة طلب صيانة</h3>
+      <button class="modal-close" onclick="closeModal('maintenanceModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="maintId">
+      <div class="form-group">
+        <label>العقار</label>
+        <select id="maintProperty"></select>
+      </div>
+      <div class="form-group">
+        <label>عنوان الطلب</label>
+        <input type="text" id="maintTitle" placeholder="مثال: إصلاح سباكة">
+      </div>
+      <div class="form-group">
+        <label>الوصف</label>
+        <textarea id="maintDesc" rows="3" placeholder="وصف تفصيلي للصيانة المطلوبة"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>التكلفة التقديرية (ر.س)</label>
+          <input type="number" id="maintCost" placeholder="مثال: 500">
+        </div>
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="maintDate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>الحالة</label>
+        <select id="maintStatus"><option>مجدولة</option><option>قيد التنفيذ</option><option>مكتملة</option><option>ملغية</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveMaintenance()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('maintenanceModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unit Modal -->
+<div class="modal-overlay" id="unitModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_unit">إضافة وحدة جديدة</h3>
+      <button class="modal-close" onclick="closeModal('unitModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="unitId">
+      <input type="hidden" id="unitPropertyId">
+      <div class="form-group">
+        <label>اسم الوحدة</label>
+        <input type="text" id="unitName" placeholder="مثال: شقة ١٠١">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>النوع</label>
+          <select id="unitType">
+            <optgroup label="سكنية">
+              <option>شقة</option>
+              <option>فيلا</option>
+              <option>استوديو</option>
+              <option>غرفة</option>
+            </optgroup>
+            <optgroup label="تجارية">
+              <option>محل تجاري</option>
+              <option>مكتب</option>
+              <option>مستودع</option>
+              <option>معرض</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الحالة</label>
+          <select id="unitStatus"><option>شاغر</option><option>مؤجر</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>المساحة (م²)</label>
+          <input type="number" id="unitArea" placeholder="مثال: 120">
+        </div>
+        <div class="form-group">
+          <label>مبلغ الإيجار (ر.س)</label>
+          <input type="number" id="unitRent" placeholder="مثال: 15000">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveUnit()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('unitModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Org Modal -->
+<div class="modal-overlay" id="orgModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle_org">إضافة مؤسسة جديدة</h3>
+      <button class="modal-close" onclick="closeModal('orgModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="orgId">
+      <div class="form-group">
+        <label>اسم المؤسسة</label>
+        <input type="text" id="orgNameInput" placeholder="مثال: مؤسسة النور العقارية">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الشعار (رمز)</label>
+          <input type="text" id="orgLogoInput" placeholder="🏢" maxlength="2">
+        </div>
+        <div class="form-group">
+          <label>الجوال</label>
+          <input type="text" id="orgPhone" placeholder="05xxxxxxxx">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="orgEmail" placeholder="info@example.com">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveOrg()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('orgModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
