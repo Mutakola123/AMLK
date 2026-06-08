@@ -505,3 +505,31 @@ tr:hover {
   display: flex;
   gap: 4px;
 }
+
+/* Login */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  background: white;
+  border-radius: 16px;
+  padding: 40px 32px;
+  width: 90%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.login-box input {
+  text-align: right;
+}
+
+.login-overlay.hidden {
+  display: none;
+}

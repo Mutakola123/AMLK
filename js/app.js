@@ -3,11 +3,40 @@ let editingId = null;
 let currentPropertyId = null;
 
 function init() {
+  if (localStorage.getItem('_loggedIn') === '1') {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    startApp();
+  }
+}
+
+function startApp() {
   DB.init();
   renderOrgSwitcher();
   renderAll();
   setupEvents();
   showPage('dashboard');
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  const saved = JSON.parse(localStorage.getItem('_users') || '[]');
+  const valid = saved.length === 0 ? (user === 'admin' && pass === 'admin') : saved.some(u => u.user === user && u.pass === pass);
+  if (valid) {
+    localStorage.setItem('_loggedIn', '1');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    startApp();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function logout() {
+  if (confirm('تسجيل الخروج؟')) {
+    localStorage.removeItem('_loggedIn');
+    location.reload();
+  }
 }
 
 function setupEvents() {
