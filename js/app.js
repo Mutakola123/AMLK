@@ -1,3 +1,4 @@
+console.log('✅ app.js loaded');
 let currentPage = 'dashboard';
 let editingId = null;
 let currentPropertyId = null;
@@ -10,11 +11,16 @@ function init() {
 }
 
 function startApp() {
-  DB.init();
-  renderOrgSwitcher();
-  renderAll();
-  setupEvents();
-  showPage('dashboard');
+  try {
+    DB.init();
+    renderOrgSwitcher();
+    renderAll();
+    setupEvents();
+    showPage('dashboard');
+  } catch (e) {
+    console.error('❌ startApp error:', e);
+    alert('حدث خطأ: ' + e.message + '\nافتح Console (F12) للتفاصيل');
+  }
 }
 
 function handleLogin(e) {
@@ -140,30 +146,34 @@ function showPage(page) {
 }
 
 function renderPage(page) {
-  switch (page) {
-    case 'dashboard': renderDashboard(); break;
-    case 'properties': renderProperties(); break;
-    case 'tenants': renderTenants(); break;
-    case 'contracts': renderContracts(); break;
-    case 'payments': renderPayments(); break;
-    case 'maintenance': renderMaintenance(); break;
-    case 'users': renderUsers(); break;
-    case 'vouchers': renderVouchers(); break;
-    case 'finance': renderFinance(); break;
-    case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
-  }
+  try {
+    switch (page) {
+      case 'dashboard': renderDashboard(); break;
+      case 'properties': renderProperties(); break;
+      case 'tenants': renderTenants(); break;
+      case 'contracts': renderContracts(); break;
+      case 'payments': renderPayments(); break;
+      case 'maintenance': renderMaintenance(); break;
+      case 'users': renderUsers(); break;
+      case 'vouchers': renderVouchers(); break;
+      case 'finance': renderFinance(); break;
+      case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
+    }
+  } catch (e) { console.warn('⚠️ renderPage', page, e); }
 }
 
+function safeRender(fn) { try { fn(); } catch (e) { console.warn('⚠️', fn.name, e); } }
+
 function renderAll() {
-  renderDashboard();
-  renderProperties();
-  renderTenants();
-  renderContracts();
-  renderPayments();
-  renderMaintenance();
-  renderVouchers();
-  renderFinance();
-  renderUsers();
+  safeRender(renderDashboard);
+  safeRender(renderProperties);
+  safeRender(renderTenants);
+  safeRender(renderContracts);
+  safeRender(renderPayments);
+  safeRender(renderMaintenance);
+  safeRender(renderVouchers);
+  safeRender(renderFinance);
+  safeRender(renderUsers);
 }
 
 // ---- Dashboard ----
