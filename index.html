@@ -56,7 +56,10 @@
     <div class="nav-item" data-page="maintenance">
       <span class="icon">🔧</span> الصيانة
     </div>
-    <div class="nav-item" data-page="back" style="display:none;border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:12px" id="backNavItem">
+    <div class="nav-item" data-page="users" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:12px">
+      <span class="icon">👥</span> المستخدمين
+    </div>
+    <div class="nav-item" data-page="back" style="display:none" id="backNavItem">
       <span class="icon">🔙</span> رجوع
     </div>
   </nav>
@@ -161,6 +164,22 @@
             <tr><th>الطلب</th><th>العقار</th><th>الوصف</th><th>التكلفة</th><th>التاريخ</th><th>الحالة</th><th></th></tr>
           </thead>
           <tbody id="maintenanceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="page" id="page-users">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>إدارة المستخدمين</h3>
+          <button class="btn btn-primary" onclick="openUserForm()">+ إضافة مستخدم</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>اسم المستخدم</th><th>تاريخ الإضافة</th><th></th></tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -494,6 +513,31 @@
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveUnit()">حفظ</button>
       <button class="btn" style="background:var(--gray-100)" onclick="closeModal('unitModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 id="modalTitle_user">إضافة مستخدم جديد</h3>
+      <button class="modal-close" onclick="closeModal('userModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="userId">
+      <div class="form-group">
+        <label>اسم المستخدم</label>
+        <input type="text" id="userName" placeholder="مثال: admin" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="text" id="userPass" placeholder="كلمة المرور" dir="ltr">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveUser()">حفظ</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('userModal')">إلغاء</button>
     </div>
   </div>
 </div>

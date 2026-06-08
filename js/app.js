@@ -131,7 +131,7 @@ function showPage(page) {
     document.getElementById('pageTitle').textContent = 'تفاصيل العمارة';
     document.getElementById('backNavItem').style.display = 'flex';
   } else {
-    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة' };
+    const titles = { dashboard: 'لوحة التحكم', properties: 'العقارات', tenants: 'المستأجرين', contracts: 'العقود', payments: 'المدفوعات', maintenance: 'الصيانة', users: 'المستخدمين' };
     document.getElementById('pageTitle').textContent = titles[page] || 'لوحة التحكم';
     document.getElementById('backNavItem').style.display = 'none';
   }
@@ -147,6 +147,7 @@ function renderPage(page) {
     case 'contracts': renderContracts(); break;
     case 'payments': renderPayments(); break;
     case 'maintenance': renderMaintenance(); break;
+    case 'users': renderUsers(); break;
     case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
   }
 }
@@ -158,6 +159,7 @@ function renderAll() {
   renderContracts();
   renderPayments();
   renderMaintenance();
+  renderUsers();
 }
 
 // ---- Dashboard ----
@@ -932,6 +934,69 @@ function deleteMaintenance(id) {
     renderMaintenance();
     renderDashboard();
   }
+}
+
+// ---- Users ----
+function renderUsers() {
+  const users = JSON.parse(localStorage.getItem('_users') || '[]');
+  const tbody = document.getElementById('usersTableBody');
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="icon">👥</div><p>لا يوجد مستخدمون. أضف مستخدماً جديداً</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = users.map(u => `<tr>
+    <td style="font-weight:600">${u.user}</td>
+    <td style="color:var(--gray-500)">${u.created || '-'}</td>
+    <td><div class="actions">
+      <button class="btn-icon" onclick="editUser('${u.user}')" title="تعديل">✏️</button>
+      <button class="btn-icon" onclick="deleteUser('${u.user}')" title="حذف">🗑️</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openUserForm(data) {
+  editingId = data?.user || null;
+  document.getElementById('userId').value = data?.user || '';
+  document.getElementById('userName').value = data?.user || '';
+  document.getElementById('userPass').value = '';
+  document.getElementById('modalTitle_user').textContent = data ? 'تعديل المستخدم' : 'إضافة مستخدم جديد';
+  openModal('userModal');
+}
+
+function saveUser() {
+  const user = document.getElementById('userName').value.trim();
+  const pass = document.getElementById('userPass').value.trim();
+  if (!user || !pass) return alert('الرجاء إدخال اسم المستخدم وكلمة المرور');
+  let users = JSON.parse(localStorage.getItem('_users') || '[]');
+  if (editingId) {
+    const idx = users.findIndex(u => u.user === editingId);
+    if (idx > -1) {
+      if (user !== editingId && users.some(u => u.user === user)) return alert('اسم المستخدم موجود مسبقاً');
+      users[idx].user = user;
+      if (pass) users[idx].pass = pass;
+    }
+  } else {
+    if (users.some(u => u.user === user)) return alert('اسم المستخدم موجود مسبقاً');
+    users.push({ user, pass, created: new Date().toLocaleDateString('ar-SA') });
+  }
+  localStorage.setItem('_users', JSON.stringify(users));
+  closeModal('userModal');
+  renderUsers();
+}
+
+function editUser(user) {
+  const users = JSON.parse(localStorage.getItem('_users') || '[]');
+  const u = users.find(x => x.user === user);
+  if (u) openUserForm(u);
+}
+
+function deleteUser(user) {
+  if (user === 'admin' && !JSON.parse(localStorage.getItem('_users') || '[]').length) return alert('لا يمكن حذف المستخدم الافتراضي');
+  if (!confirm(`حذف المستخدم "${user}"؟`)) return;
+  let users = JSON.parse(localStorage.getItem('_users') || '[]');
+  users = users.filter(u => u.user !== user);
+  localStorage.setItem('_users', JSON.stringify(users));
+  renderUsers();
 }
 
 // ---- Helpers ----
