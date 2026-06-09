@@ -972,7 +972,7 @@ function renderFinance() {
   const now = new Date();
   const cy = now.getFullYear();
 
-  // الإيرادات غير الإيجارية + الإيجارية
+  // الإيرادات + المصروفات
   const nonRentIncome = finEntries.filter(e => e.type === 'إيراد' && e.date && new Date(e.date).getFullYear() === cy).reduce((s, e) => s + Number(e.amount || 0), 0);
   const rentIncome = vouchers.filter(v => v.type === 'قبض' && v.date && new Date(v.date).getFullYear() === cy).reduce((s, v) => s + Number(v.amount || 0), 0);
   const expenses = finEntries.filter(e => e.type === 'مصروف' && e.date && new Date(e.date).getFullYear() === cy).reduce((s, e) => s + Number(e.amount || 0), 0);

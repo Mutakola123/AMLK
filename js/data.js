@@ -280,7 +280,7 @@ const DB = {
   },
   getVoucher(id) { return this.getVouchers().find(i => i.id === id); },
 
-  // الإيرادات والمصروفات (غير الإيجارية)
+  // الإيرادات والمصروفات
   getFinEntries() { return this._get('finEntries'); },
   saveFinEntry(e) {
     const items = this.getFinEntries();
