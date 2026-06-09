@@ -13,7 +13,6 @@ function init() {
 function startApp() {
   try {
     DB.init();
-    renderOrgSwitcher();
     renderAll();
     setupEvents();
     showPage('dashboard');
@@ -64,65 +63,7 @@ function setupEvents() {
   });
 }
 
-function renderOrgSwitcher() {
-  const orgs = DB.getOrgs();
-  const current = DB.getOrg(DB.getCurrentOrgId());
 
-  document.getElementById('orgName').textContent = current ? current.name : 'المؤسسة';
-  document.getElementById('orgLogo').textContent = current ? (current.logo || '🏢') : '🏢';
-
-  const menu = document.getElementById('orgMenu');
-  if (orgs.length <= 1) {
-    menu.innerHTML = '';
-    return;
-  }
-  menu.innerHTML = orgs.map(o => `
-    <div class="nav-item" style="padding:8px 20px;font-size:13px;${o.id === DB.getCurrentOrgId() ? 'background:rgba(255,255,255,0.1);color:white' : ''}" onclick="switchOrg(${o.id})">
-      <span>${o.logo || '🏢'}</span> ${o.name}
-    </div>
-  `).join('');
-}
-
-function switchOrg(id) {
-  if (id === DB.getCurrentOrgId()) return;
-  DB.setCurrentOrg(id);
-  renderOrgSwitcher();
-  renderAll();
-  if (currentPage === 'property-detail') { currentPage = 'dashboard'; showPage('dashboard'); }
-  else { showPage(currentPage); }
-  closeSidebar();
-}
-
-function openOrgForm() {
-  editingId = null;
-  document.getElementById('orgId').value = '';
-  document.getElementById('orgNameInput').value = '';
-  document.getElementById('orgLogoInput').value = '🏢';
-  document.getElementById('orgPhone').value = '';
-  document.getElementById('orgEmail').value = '';
-  document.getElementById('modalTitle_org').textContent = 'إضافة مؤسسة جديدة';
-  openModal('orgModal');
-}
-
-function saveOrg() {
-  const data = {
-    id: editingId || null,
-    name: document.getElementById('orgNameInput').value.trim(),
-    logo: document.getElementById('orgLogoInput').value.trim() || '🏢',
-    phone: document.getElementById('orgPhone').value.trim(),
-    email: document.getElementById('orgEmail').value.trim()
-  };
-  if (!data.name) return alert('الرجاء إدخال اسم المؤسسة');
-  const saved = DB.saveOrg(data);
-  if (!editingId) {
-    DB.setCurrentOrg(saved.id);
-    DB.seed();
-  }
-  closeModal('orgModal');
-  renderOrgSwitcher();
-  renderAll();
-  showPage('dashboard');
-}
 
 function showPage(page) {
   currentPage = page;

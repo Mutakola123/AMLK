@@ -1,69 +1,30 @@
 const DB = {
-  _currentOrgId: null,
-
   init() {
-    // هجرة البيانات القديمة إلى النظام الجديد
-    const oldProps = (() => { try { return JSON.parse(localStorage.getItem('properties')); } catch { return null; } })();
-    if (oldProps && Array.isArray(oldProps) && oldProps.length > 0) {
-      ['properties','tenants','units','contracts','payments','maintenance','installments'].forEach(k => {
-        const val = localStorage.getItem(k);
-        if (val) { localStorage.setItem(`org_1_${k}`, val); localStorage.removeItem(k); }
-      });
+    // هجرة من النظام القديم (متعدد المؤسسات) إلى النظام البسيط
+    const org1Keys = ['org_1_properties','org_1_tenants','org_1_units','org_1_contracts','org_1_installments','org_1_maintenance','org_1_vouchers','org_1_finEntries'];
+    let hasMigrated = false;
+    org1Keys.forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val) {
+        const simpleKey = k.replace('org_1_', '');
+        if (!localStorage.getItem(simpleKey)) {
+          localStorage.setItem(simpleKey, val);
+        }
+        localStorage.removeItem(k);
+        hasMigrated = true;
+      }
+    });
+    if (hasMigrated) {
+      localStorage.removeItem('_orgs');
+      localStorage.removeItem('_currentOrg');
     }
-    const orgId = parseInt(localStorage.getItem('_currentOrg'));
-    const orgs = this._getOrgs();
-    if (orgs.length === 0) {
-      this._setOrgs([{ id: 1, name: 'المؤسسة العقارية', phone: '', email: '', logo: '🏢', createdAt: new Date().toISOString() }]);
-      this._setCurrentOrg(1);
+    if (!localStorage.getItem('properties')) {
       this.seed();
-    } else if (orgId && orgs.some(o => o.id === orgId)) {
-      this._currentOrgId = orgId;
-    } else {
-      this._setCurrentOrg(orgs[0].id);
     }
-  },
-
-  _getOrgs() {
-    try { return JSON.parse(localStorage.getItem('_orgs')) || []; } catch { return []; }
-  },
-  _setOrgs(orgs) {
-    localStorage.setItem('_orgs', JSON.stringify(orgs));
-  },
-  getOrgs() { return this._getOrgs(); },
-  getOrg(id) { return this._getOrgs().find(o => o.id === id); },
-
-  saveOrg(o) {
-    const items = this._getOrgs();
-    if (o.id) {
-      const idx = items.findIndex(i => i.id === o.id);
-      if (idx > -1) items[idx] = o;
-    } else {
-      o.id = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
-      o.createdAt = new Date().toISOString();
-      items.push(o);
-    }
-    this._setOrgs(items);
-    return o;
-  },
-  deleteOrg(id) {
-    this._setOrgs(this._getOrgs().filter(i => i.id !== id));
-  },
-
-  getCurrentOrgId() {
-    if (!this._currentOrgId) {
-      const orgs = this._getOrgs();
-      if (orgs.length > 0) this._currentOrgId = orgs[0].id;
-    }
-    return this._currentOrgId;
-  },
-  setCurrentOrg(id) {
-    this._currentOrgId = id;
-    localStorage.setItem('_currentOrg', String(id));
   },
 
   _p(key) {
-    const orgId = this.getCurrentOrgId();
-    return orgId ? `org_${orgId}_${key}` : key;
+    return key;
   },
   _get(key) {
     try { return JSON.parse(localStorage.getItem(this._p(key))) || []; } catch { return []; }
@@ -339,45 +300,28 @@ const DB = {
   },
   getFinEntry(id) { return this.getFinEntries().find(i => i.id === id); },
 
-  // تصدير جميع بيانات المؤسسات
+  // تصدير جميع البيانات
   exportAll() {
     const data = {};
-    const orgs = this._getOrgs();
-    data._orgs = orgs;
-    data._currentOrg = localStorage.getItem('_currentOrg') || '';
-    data._users = (() => { try { return JSON.parse(localStorage.getItem('_users')); } catch { return null; } })();
-    orgs.forEach(o => {
-      const prefix = `org_${o.id}_`;
-      ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries'].forEach(k => {
-        const key = prefix + k;
-        const val = localStorage.getItem(key);
-        if (val) data[key] = JSON.parse(val);
-      });
+    ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries','_users'].forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val) data[k] = JSON.parse(val);
     });
     data._exportedAt = new Date().toISOString();
-    data._version = 1;
+    data._version = 2;
     return JSON.stringify(data, null, 2);
   },
 
-  // استيراد بيانات المؤسسات
+  // استيراد البيانات
   importAll(jsonStr) {
     const data = JSON.parse(jsonStr);
-    if (!data._orgs) throw new Error('ملف غير صالح: لا يوجد قائمة مؤسسات');
-    // حفظ قائمة المؤسسات والمستخدمين
-    this._setOrgs(data._orgs);
-    if (data._users) localStorage.setItem('_users', JSON.stringify(data._users));
-    // حفظ كل مفتاح موجود
+    let count = 0;
     Object.keys(data).forEach(key => {
-      if (key.startsWith('org_') || key === '_users') {
-        localStorage.setItem(key, JSON.stringify(data[key]));
-      }
+      if (key.startsWith('_')) return;
+      localStorage.setItem(key, JSON.stringify(data[key]));
+      count++;
     });
-    // تعيين المؤسسة الحالية
-    if (data._currentOrg) {
-      localStorage.setItem('_currentOrg', data._currentOrg);
-      this._currentOrgId = parseInt(data._currentOrg);
-    }
-    return Object.keys(data).filter(k => k.startsWith('org_')).length;
+    return count;
   },
 
   // تهيئة بيانات تجريبية
