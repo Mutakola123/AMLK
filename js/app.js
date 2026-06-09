@@ -27,7 +27,7 @@ function handleLogin(e) {
   const user = document.getElementById('loginUser').value.trim();
   const pass = document.getElementById('loginPass').value.trim();
   const saved = JSON.parse(localStorage.getItem('_users') || '[]');
-  const valid = saved.length === 0 ? (user === 'admin' && pass === 'admin') : saved.some(u => u.user === user && u.pass === pass);
+  const valid = saved.length === 0 ? (user === 'muta' && pass === '4862') : saved.some(u => u.user === user && u.pass === pass);
   if (valid) {
     localStorage.setItem('_loggedIn', '1');
     document.getElementById('loginOverlay').classList.add('hidden');
