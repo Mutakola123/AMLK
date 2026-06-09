@@ -979,9 +979,9 @@ function renderFinance() {
   const expected = inst.filter(i => i.status !== 'مدفوع').reduce((s, i) => s + Number(i.amount || 0), 0);
 
   document.getElementById('financeStats').innerHTML = `
-    <div class="stat-card"><div class="label">💵 إيرادات غير إيجارية (${cy})</div><div class="value" style="color:var(--success)">${nonRentIncome.toLocaleString()} ر.س</div><div class="sub">إيجارية: ${rentIncome.toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">💵 الإيرادات (${cy})</div><div class="value" style="color:var(--success)">${nonRentIncome.toLocaleString()} ر.س</div><div class="sub">إيجارية: ${rentIncome.toLocaleString()} ر.س</div></div>
     <div class="stat-card"><div class="label">💸 المصروفات (${cy})</div><div class="value" style="color:var(--danger)">${expenses.toLocaleString()} ر.س</div></div>
-    <div class="stat-card"><div class="label">📈 صافي غير الإيجاري (${cy})</div><div class="value" style="color:${nonRentIncome - expenses >= 0 ? 'var(--success)' : 'var(--danger)'}">${(nonRentIncome - expenses).toLocaleString()} ر.س</div><div class="sub">إجمالي الإيرادات: ${(nonRentIncome + rentIncome).toLocaleString()} ر.س</div></div>
+    <div class="stat-card"><div class="label">📈 صافي الدخل (${cy})</div><div class="value" style="color:${nonRentIncome - expenses >= 0 ? 'var(--success)' : 'var(--danger)'}">${(nonRentIncome - expenses).toLocaleString()} ر.س</div><div class="sub">إجمالي الإيرادات: ${(nonRentIncome + rentIncome).toLocaleString()} ر.س</div></div>
     <div class="stat-card"><div class="label">⏳ الذمم المتوقعة</div><div class="value" style="color:var(--warning)">${expected.toLocaleString()} ر.س</div></div>
   `;
 
@@ -1038,7 +1038,7 @@ function renderFinIncome() {
   const items = DB.getFinEntries().filter(e => e.type === 'إيراد').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const tbody = document.getElementById('finIncomeTableBody');
   if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">💵</div><p>لا توجد إيرادات غير إيجارية</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">💵</div><p>لا توجد إيرادات</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(e => `<tr>
