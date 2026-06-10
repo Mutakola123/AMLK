@@ -1,4 +1,3 @@
-console.log('✅ app.js loaded');
 let currentPage = 'dashboard';
 let editingId = null;
 let currentPropertyId = null;
@@ -11,15 +10,10 @@ function init() {
 }
 
 function startApp() {
-  try {
-    DB.init();
-    renderAll();
-    setupEvents();
-    showPage('dashboard');
-  } catch (e) {
-    console.error('❌ startApp error:', e);
-    alert('حدث خطأ: ' + e.message + '\nافتح Console (F12) للتفاصيل');
-  }
+  DB.init();
+  renderAll();
+  setupEvents();
+  showPage('dashboard');
 }
 
 function handleLogin(e) {
@@ -63,8 +57,6 @@ function setupEvents() {
   });
 }
 
-
-
 function showPage(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -87,34 +79,30 @@ function showPage(page) {
 }
 
 function renderPage(page) {
-  try {
-    switch (page) {
-      case 'dashboard': renderDashboard(); break;
-      case 'properties': renderProperties(); break;
-      case 'tenants': renderTenants(); break;
-      case 'contracts': renderContracts(); break;
-      case 'payments': renderPayments(); break;
-      case 'maintenance': renderMaintenance(); break;
-      case 'users': renderUsers(); break;
-      case 'vouchers': renderVouchers(); break;
-      case 'finance': renderFinance(); break;
-      case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
-    }
-  } catch (e) { console.warn('⚠️ renderPage', page, e); }
+  switch (page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'properties': renderProperties(); break;
+    case 'tenants': renderTenants(); break;
+    case 'contracts': renderContracts(); break;
+    case 'payments': renderPayments(); break;
+    case 'maintenance': renderMaintenance(); break;
+    case 'users': renderUsers(); break;
+    case 'vouchers': renderVouchers(); break;
+    case 'finance': renderFinance(); break;
+    case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
+  }
 }
 
-function safeRender(fn) { try { fn(); } catch (e) { console.warn('⚠️', fn.name, e); } }
-
 function renderAll() {
-  safeRender(renderDashboard);
-  safeRender(renderProperties);
-  safeRender(renderTenants);
-  safeRender(renderContracts);
-  safeRender(renderPayments);
-  safeRender(renderMaintenance);
-  safeRender(renderVouchers);
-  safeRender(renderFinance);
-  safeRender(renderUsers);
+  renderDashboard();
+  renderProperties();
+  renderTenants();
+  renderContracts();
+  renderPayments();
+  renderMaintenance();
+  renderVouchers();
+  renderFinance();
+  renderUsers();
 }
 
 // ---- Dashboard ----
@@ -316,7 +304,6 @@ function renderPropertyDetail(id) {
   const stats = DB.getPropertyStats(id);
   const units = DB.getUnitsByProperty(id);
   const contracts = DB.getContractsByProperty(id);
-  const payments = DB.getPaymentsByProperty(id);
   const maintenance = DB.getMaintenanceByProperty(id);
 
   // رأس العمارة
@@ -1118,7 +1105,6 @@ function deleteFinEntry(id) {
   }
 }
 
-// ---- Vouchers ----
 function toggleVoucherRef() {
   const t = document.getElementById('voucherRefType').value;
   document.getElementById('voucherRefContractGroup').style.display = t === 'contract' ? 'block' : 'none';
@@ -1143,10 +1129,6 @@ function updateVoucherPreview() {
   } else {
     preview.style.display = 'none';
   }
-}
-
-function updateVoucherNumber() {
-  updateVoucherPreview();
 }
 
 function openVoucherForm(data) {
@@ -1213,7 +1195,6 @@ function deleteVoucher(id) {
 function printVoucher(id) {
   const v = DB.getVoucher(id);
   if (!v) return;
-  const org = DB.getOrg(DB.getCurrentOrgId());
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${v.type}</title>
     <style>
@@ -1225,14 +1206,10 @@ function printVoucher(id) {
       .vp-amt { font-size:36px; font-weight:700; text-align:center; padding:24px; background:#f8f9fa; border-radius:12px; margin-bottom:24px; }
       .vp-desc { font-size:16px; line-height:2; padding:16px; border:1px solid #dadce0; border-radius:8px; min-height:80px; margin-bottom:24px; }
       .vp-ftr { display:flex; justify-content:space-between; font-size:13px; color:#5f6368; border-top:1px solid #dadce0; padding-top:16px; }
-      .vp-org { text-align:center; margin-bottom:24px; }
-      .vp-org h2 { margin:0; font-size:20px; }
-      .vp-org span { font-size:13px; color:#5f6368; }
       @media print { body { background:white; } .vp { box-shadow:none; margin:0; border-radius:0; } }
     </style>
   </head><body>
     <div class="vp">
-      <div class="vp-org"><div style="font-size:48px;margin-bottom:8px">${org ? (org.logo || '🏢') : '🏢'}</div><h2>${org ? org.name : 'المؤسسة العقارية'}</h2><span>${org ? org.phone || '' : ''} ${org && org.email ? '| ' + org.email : ''}</span></div>
       <div class="vp-hdr">
         <div class="t" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${v.type === 'قبض' ? '📥' : '📤'} سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</div>
         <div class="n">${v.number || ''}<br><span style="font-size:12px;color:#9aa0a6">${v.date || ''}</span></div>
@@ -1306,7 +1283,6 @@ function editUser(user) {
 }
 
 function deleteUser(user) {
-  if (user === 'admin' && !JSON.parse(localStorage.getItem('_users') || '[]').length) return alert('لا يمكن حذف المستخدم الافتراضي');
   if (!confirm(`حذف المستخدم "${user}"؟`)) return;
   let users = JSON.parse(localStorage.getItem('_users') || '[]');
   users = users.filter(u => u.user !== user);
@@ -1343,7 +1319,7 @@ function importData(event) {
   reader.onload = function(e) {
     try {
       const count = DB.importAll(e.target.result);
-      alert(`✅ تم استيراد بيانات ${count} مؤسسة بنجاح.\nسيتم تحديث الصفحة الآن.`);
+      alert(`✅ تم استيراد ${count} حقل بيانات بنجاح.\nسيتم تحديث الصفحة الآن.`);
       event.target.value = '';
       window.location.reload();
     } catch (err) {
