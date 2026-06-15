@@ -89,28 +89,53 @@
 
     <!-- Dashboard -->
     <div class="page active" id="page-dashboard">
+      <!-- تنبيهات -->
+      <div id="dashAlerts" style="margin-bottom:16px"></div>
+
+      <!-- إحصائيات -->
       <div class="stats-grid">
-        <div class="stat-card"><div class="label">🏠 العقارات</div><div class="value" id="statProperties">0</div><div class="sub">إجمالي العقارات</div></div>
-        <div class="stat-card"><div class="label">👤 المستأجرين</div><div class="value" id="statTenants">0</div><div class="sub">إجمالي المستأجرين</div></div>
-        <div class="stat-card"><div class="label">📄 العقود النشطة</div><div class="value" id="statContracts">0</div><div class="sub">عقود سارية</div></div>
-        <div class="stat-card"><div class="label">✅ مدفوعات</div><div class="value" id="statPaid">0 ر.س</div><div class="sub">إجمالي المدفوعات</div></div>
-        <div class="stat-card"><div class="label">⚠️ متأخرات</div><div class="value" id="statDue">0 ر.س</div><div class="sub">مدفوعات متأخرة</div></div>
-        <div class="stat-card"><div class="label">🔧 الصيانة</div><div class="value" id="statMaintenance">0</div><div class="sub">طلبات قيد التنفيذ</div></div>
-        <div class="stat-card"><div class="label">🚪 الوحدات</div><div class="value" id="statUnits">0</div><div class="sub">إجمالي الوحدات</div></div>
-        <div class="stat-card"><div class="label">📈 الدخل السنوي</div><div class="value" id="statYearly">0 ر.س</div><div class="sub">السنة الحالية</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--primary)"><div class="label">🏠 العقارات</div><div class="value" id="statProperties">0</div><div class="sub" id="statOccupancy">0% إشغال</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--info)"><div class="label">👤 المستأجرين</div><div class="value" id="statTenants">0</div><div class="sub">إجمالي المستأجرين</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--success)"><div class="label">📄 العقود النشطة</div><div class="value" id="statContracts">0</div><div class="sub">عقود سارية</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--success)"><div class="label">💰 الدخل الشهري</div><div class="value" id="statMonthly" style="color:var(--success)">0 ر.س</div><div class="sub">الشهر الحالي</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--primary)"><div class="label">📈 الدخل السنوي</div><div class="value" id="statYearly">0 ر.س</div><div class="sub">السنة الحالية</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--warning)"><div class="label">⏳ المدفوعات</div><div class="value" id="statPaid" style="color:var(--success)">0 ر.س</div><div class="sub">إجمالي المدفوعات</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--danger)"><div class="label">⚠️ المتأخرات</div><div class="value" id="statDue" style="color:var(--danger)">0 ر.س</div><div class="sub" id="statDueCount">0 دفعة</div></div>
+        <div class="stat-card" style="border-right:4px solid var(--warning)"><div class="label">🔧 الصيانة</div><div class="value" id="statMaintenance">0</div><div class="sub" id="statMaintenanceCost">0 ر.س تكلفة</div></div>
       </div>
 
+      <!-- أزرار إجراءات سريعة -->
+      <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openPropertyForm()">+ إضافة عقار</button>
+        <button class="btn" style="background:var(--primary-light);color:var(--primary)" onclick="showPage('contracts');setTimeout(()=>openContractForm(),100)">📄 إبرام عقد</button>
+        <button class="btn" style="background:var(--warning-light);color:var(--warning)" onclick="showPage('maintenance');setTimeout(()=>openMaintenanceForm(),100)">🔧 طلب صيانة</button>
+        <button class="btn" style="background:var(--success-light);color:var(--success)" onclick="showPage('vouchers');setTimeout(()=>openVoucherForm(),100)">📋 سند جديد</button>
+      </div>
+
+      <!-- رسم بياني شهري + تنبيهات -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="table-container">
+          <div class="table-header"><h3>📊 الدخل والمصروفات الشهرية</h3></div>
+          <div id="dashChart" style="padding:16px"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>⏰ الأقساط القادمة</h3></div>
+          <div id="dashUpcoming"></div>
+        </div>
+      </div>
+
+      <!-- أحدث العقارات + المدفوعات + الصيانة -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="table-container">
-          <div class="table-header"><h3>أحدث العقارات</h3></div>
+          <div class="table-header"><h3>🏠 أحدث العقارات</h3></div>
           <div id="dashProperties"></div>
         </div>
         <div class="table-container">
-          <div class="table-header"><h3>آخر المدفوعات</h3></div>
+          <div class="table-header"><h3>💰 آخر المدفوعات</h3></div>
           <div id="dashPayments"></div>
         </div>
         <div class="table-container" style="grid-column:1/-1">
-          <div class="table-header"><h3>طلبات الصيانة</h3></div>
+          <div class="table-header"><h3>🔧 طلبات الصيانة</h3></div>
           <div id="dashMaintenance"></div>
         </div>
       </div>

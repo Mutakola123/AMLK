@@ -110,44 +110,137 @@ function renderDashboard() {
   const s = DB.getStats();
   const properties = DB.getProperties();
   const maintenance = DB.getMaintenance();
+  const units = DB.getUnits();
+  const now = new Date();
+  const cm = now.getMonth(), cy = now.getFullYear();
+  const today = new Date(now.toISOString().split('T')[0]);
 
+  // إحصائيات
   document.getElementById('statProperties').textContent = s.totalProperties;
   document.getElementById('statTenants').textContent = s.totalTenants;
   document.getElementById('statContracts').textContent = s.activeContracts;
   document.getElementById('statPaid').textContent = s.totalPaid.toLocaleString() + ' ر.س';
   document.getElementById('statDue').textContent = s.totalDue.toLocaleString() + ' ر.س';
   document.getElementById('statMaintenance').textContent = s.pendingMaintenance;
-  document.getElementById('statUnits').textContent = s.totalUnits;
   document.getElementById('statYearly').textContent = s.yearlyIncome.toLocaleString() + ' ر.س';
+  document.getElementById('statMonthly').textContent = s.monthlyIncome.toLocaleString() + ' ر.س';
+  document.getElementById('statDueCount').textContent = s.lateCount + ' دفعة متأخرة';
+  document.getElementById('statMaintenanceCost').textContent = s.maintenanceCost.toLocaleString() + ' ر.س تكلفة';
 
+  // نسبة الإشغال
+  const rented = units.filter(u => u.status === 'مؤجر').length;
+  const total = units.length;
+  const occ = total > 0 ? Math.round(rented / total * 100) : 0;
+  document.getElementById('statOccupancy').textContent = occ + '% إشغال (' + rented + '/' + total + ')';
+
+  // تنبيهات
+  const alerts = [];
+  const lateInst = DB.getInstallments().filter(i => i.status !== 'مدفوع' && new Date(i.dueDate) < today);
+  const upcomingInst = DB.getInstallments().filter(i => i.status === 'قادم' && new Date(i.dueDate) >= today && new Date(i.dueDate) <= new Date(today.getTime() + 7 * 86400000));
+  if (lateInst.length > 0) {
+    const totalLate = lateInst.reduce((s, i) => s + Number(i.amount || 0), 0);
+    alerts.push(`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff3f3;border-radius:8px;border-right:4px solid var(--danger)">
+      <span style="font-size:24px">⚠️</span>
+      <div style="flex:1"><strong>${lateInst.length} قسط متأخر</strong> — إجمالي ${totalLate.toLocaleString()} ر.س</div>
+      <button class="btn btn-sm" style="background:var(--danger);color:white" onclick="showPage('payments')">عرض</button>
+    </div>`);
+  }
+  if (upcomingInst.length > 0) {
+    const totalUp = upcomingInst.reduce((s, i) => s + Number(i.amount || 0), 0);
+    alerts.push(`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff8e1;border-radius:8px;border-right:4px solid var(--warning)">
+      <span style="font-size:24px">⏰</span>
+      <div style="flex:1"><strong>${upcomingInst.length} قسط يستحق خلال أسبوع</strong> — ${totalUp.toLocaleString()} ر.س</div>
+      <button class="btn btn-sm" style="background:var(--warning);color:white" onclick="showPage('payments')">عرض</button>
+    </div>`);
+  }
+  if (s.pendingMaintenance > 0) {
+    alerts.push(`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#e3f2fd;border-radius:8px;border-right:4px solid var(--info)">
+      <span style="font-size:24px">🔧</span>
+      <div style="flex:1"><strong>${s.pendingMaintenance} طلب صيانة</strong> قيد التنفيذ أو مجدول</div>
+      <button class="btn btn-sm" style="background:var(--info);color:white" onclick="showPage('maintenance')">عرض</button>
+    </div>`);
+  }
+  document.getElementById('dashAlerts').innerHTML = alerts.join('');
+
+  // رسم بياني شهري
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const inst = DB.getInstallments();
+  const finEntries = DB.getFinEntries();
+  const vouchers = DB.getVouchers();
+  const mData = months.map((m, i) => {
+    const inc = inst.filter(x => x.status === 'مدفوع' && x.paymentDate).filter(x => { const d = new Date(x.paymentDate); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, x) => s + Number(x.amount || 0), 0)
+      + finEntries.filter(e => e.type === 'إيراد' && e.date).filter(e => { const d = new Date(e.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const exp = finEntries.filter(e => e.type === 'مصروف' && e.date).filter(e => { const d = new Date(e.date); return d.getMonth() === i && d.getFullYear() === cy; }).reduce((s, e) => s + Number(e.amount || 0), 0);
+    return { m: m.substring(0, 3), inc, exp };
+  });
+  let maxV = 1;
+  mData.forEach(d => { if (d.inc + d.exp > maxV) maxV = d.inc + d.exp; });
+  let chartHtml = '<div style="display:flex;gap:4px;align-items:flex-end;height:140px">';
+  mData.forEach(d => {
+    const ih = maxV > 0 ? Math.round((d.inc / maxV) * 120) : 0;
+    const eh = maxV > 0 ? Math.round((d.exp / maxV) * 120) : 0;
+    const isActive = d.inc > 0 || d.exp > 0;
+    chartHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:${isActive ? 1 : 0.3}">
+      <div style="display:flex;gap:1px;align-items:flex-end;height:120px">
+        <div style="width:10px;background:var(--success);border-radius:3px 3px 0 0;height:${ih}px" title="دخل: ${d.inc.toLocaleString()}"></div>
+        <div style="width:10px;background:var(--danger);border-radius:3px 3px 0 0;height:${eh}px" title="مصروف: ${d.exp.toLocaleString()}"></div>
+      </div>
+      <span style="font-size:9px;color:var(--gray-500)">${d.m}</span>
+    </div>`;
+  });
+  chartHtml += '</div><div style="display:flex;gap:12px;justify-content:center;font-size:11px;margin-top:8px"><span>🟢 دخل</span><span>🔴 مصروف</span></div>';
+  document.getElementById('dashChart').innerHTML = chartHtml;
+
+  // الأقساط القادمة
+  const nextInst = [...inst].filter(i => i.status === 'قادم').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
+  const upBody = document.getElementById('dashUpcoming');
+  if (nextInst.length === 0) {
+    upBody.innerHTML = '<div class="empty-state" style="padding:20px"><div class="icon">✅</div><p>لا توجد أقساط قادمة</p></div>';
+  } else {
+    upBody.innerHTML = nextInst.map(i => {
+      const c = DB.getContract(i.contractId);
+      const prop = c ? DB.getProperty(c.propertyId) : null;
+      const diff = Math.ceil((new Date(i.dueDate) - today) / 86400000);
+      const diffText = diff === 0 ? 'اليوم' : diff === 1 ? 'غداً' : 'بعد ' + diff + ' أيام';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--gray-100)">
+        <div>
+          <div style="font-weight:500;font-size:14px">${Number(i.amount).toLocaleString()} ر.س</div>
+          <div style="font-size:12px;color:var(--gray-500)">${prop ? prop.name : ''} | ${i.dueDate}</div>
+        </div>
+        <span class="badge badge-warning" style="font-size:11px">${diffText}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // أحدث العقارات
   const propsBody = document.getElementById('dashProperties');
   if (properties.length === 0) {
     propsBody.innerHTML = '<div class="empty-state"><div class="icon">🏠</div><p>لا توجد عقارات بعد</p></div>';
   } else {
     propsBody.innerHTML = properties.slice(0, 5).map(p => {
       const stats = DB.getPropertyStats(p.id);
-      return `<div class="stat-card" style="margin-bottom:8px;cursor:pointer" onclick="showPropertyDetail(${p.id})">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:600">${p.name}</span>
-          <span class="badge ${p.status === 'مؤجر' ? 'badge-success' : p.status === 'شاغر' ? 'badge-warning' : 'badge-info'}">${p.status}</span>
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="showPropertyDetail(${p.id})">
+        <div>
+          <div style="font-weight:600">${p.name}</div>
+          <div style="font-size:12px;color:var(--gray-500)">${p.city} | ${stats.rentedUnits}/${stats.totalUnits} وحدة</div>
         </div>
-        <div style="font-size:13px;color:var(--gray-500);margin-top:4px">${p.city} | ${stats.rentedUnits}/${stats.totalUnits} وحدة مؤجرة | دخل سنوي: ${stats.yearlyIncome.toLocaleString()} ر.س</div>
+        <span class="badge ${p.status === 'مؤجر' ? 'badge-success' : p.status === 'شاغر' ? 'badge-warning' : 'badge-info'}">${p.status}</span>
       </div>`;
     }).join('');
   }
 
+  // آخر المدفوعات
   const payBody = document.getElementById('dashPayments');
-  const allInst = DB.getInstallments();
-  const recentInst = [...allInst].filter(i => i.status === 'مدفوع').sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).slice(0, 5);
+  const recentInst = [...inst].filter(i => i.status === 'مدفوع').sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)).slice(0, 5);
   if (recentInst.length === 0) {
     payBody.innerHTML = '<div class="empty-state"><div class="icon">💰</div><p>لا توجد مدفوعات</p></div>';
   } else {
     payBody.innerHTML = recentInst.map(i => {
       const c = DB.getContract(i.contractId);
       const prop = c ? DB.getProperty(c.propertyId) : null;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--gray-100)">
         <div>
-          <div style="font-weight:500">${Number(i.amount).toLocaleString()} ر.س</div>
+          <div style="font-weight:500;color:var(--success)">${Number(i.amount).toLocaleString()} ر.س</div>
           <div style="font-size:12px;color:var(--gray-500)">${i.paymentDate} ${prop ? '| ' + prop.name : ''}</div>
         </div>
         <span class="badge badge-success">مدفوع</span>
@@ -155,6 +248,7 @@ function renderDashboard() {
     }).join('');
   }
 
+  // طلبات الصيانة
   const maintBody = document.getElementById('dashMaintenance');
   const recentMaint = [...maintenance].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   if (recentMaint.length === 0) {
@@ -162,10 +256,10 @@ function renderDashboard() {
   } else {
     maintBody.innerHTML = recentMaint.map(m => {
       const p = DB.getProperty(m.propertyId);
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--gray-100)">
         <div>
           <div style="font-weight:500">${m.title}</div>
-          <div style="font-size:12px;color:var(--gray-500)">${p ? p.name : ''} | ${m.date}</div>
+          <div style="font-size:12px;color:var(--gray-500)">${p ? p.name : ''} | ${m.date} | ${Number(m.cost).toLocaleString()} ر.س</div>
         </div>
         <span class="badge ${m.status === 'مكتملة' ? 'badge-success' : m.status === 'قيد التنفيذ' ? 'badge-warning' : 'badge-info'}">${m.status}</span>
       </div>`;
