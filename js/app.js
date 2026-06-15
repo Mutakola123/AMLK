@@ -79,30 +79,26 @@ function showPage(page) {
 }
 
 function renderPage(page) {
-  switch (page) {
-    case 'dashboard': renderDashboard(); break;
-    case 'properties': renderProperties(); break;
-    case 'tenants': renderTenants(); break;
-    case 'contracts': renderContracts(); break;
-    case 'payments': renderPayments(); break;
-    case 'maintenance': renderMaintenance(); break;
-    case 'users': renderUsers(); break;
-    case 'vouchers': renderVouchers(); break;
-    case 'finance': renderFinance(); break;
-    case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
-  }
+  try {
+    switch (page) {
+      case 'dashboard': renderDashboard(); break;
+      case 'properties': renderProperties(); break;
+      case 'tenants': renderTenants(); break;
+      case 'contracts': renderContracts(); break;
+      case 'payments': renderPayments(); break;
+      case 'maintenance': renderMaintenance(); break;
+      case 'users': renderUsers(); break;
+      case 'vouchers': renderVouchers(); break;
+      case 'finance': renderFinance(); break;
+      case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
+    }
+  } catch (e) { console.warn('renderPage error:', page, e); }
 }
 
 function renderAll() {
-  renderDashboard();
-  renderProperties();
-  renderTenants();
-  renderContracts();
-  renderPayments();
-  renderMaintenance();
-  renderVouchers();
-  renderFinance();
-  renderUsers();
+  ['renderDashboard','renderProperties','renderTenants','renderContracts','renderPayments','renderMaintenance','renderVouchers','renderFinance','renderUsers'].forEach(name => {
+    try { window[name](); } catch (e) { console.warn('renderAll error:', name, e); }
+  });
 }
 
 // ---- Dashboard ----
