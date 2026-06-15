@@ -1311,6 +1311,7 @@ function exportData() {
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
+  if (!file.name.endsWith('.json')) return alert('❌ الملف يجب أن يكون بصيغة JSON');
   if (!confirm('⚠️ استيراد البيانات سيحل محل جميع البيانات الحالية. هل أنت متأكد؟')) {
     event.target.value = '';
     return;
