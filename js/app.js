@@ -1437,7 +1437,8 @@ function printVoucher(id) {
             <div class="amount">${Number(v.amount || 0).toLocaleString('en-US')} SAR</div>
           </div>
           <div class="v-amount-words">
-            <div class="ar">${amountWordsEn} Saudi Riyals Only</div>
+            <div class="ar">${amountWordsAr} ريالاً سعودياً فقط لا غير</div>
+            <div class="en">Say: ${amountWordsEn} Saudi Riyals Only</div>
           </div>
         </div>
         <div class="v-details">
