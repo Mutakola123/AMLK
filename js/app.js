@@ -17,6 +17,7 @@ function startApp() {
   renderedPages = {};
   setupEvents();
   showPage('dashboard');
+  checkAutoSync();
 }
 
 function handleLogin(e) {
@@ -1769,6 +1770,105 @@ function toggleSidebar() {
 
 function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
+}
+
+// ---- Firebase Sync ----
+function openSyncModal() {
+  const cfg = Sync.getConfig() || {};
+  document.getElementById('syncOrgId').value = cfg.orgId || '';
+  document.getElementById('syncApiKey').value = cfg.apiKey || '';
+  document.getElementById('syncAuthDomain').value = cfg.authDomain || '';
+  document.getElementById('syncDbUrl').value = cfg.databaseURL || '';
+  document.getElementById('syncProjectId').value = cfg.projectId || '';
+  const statusEl = document.getElementById('syncStatusModal');
+  if (Sync.connected) {
+    statusEl.innerHTML = '<span style="color:var(--success)">✅ متصل - الزامنة مفعلة</span>';
+  } else if (Sync.isConfigured()) {
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ غير متصل - جارٍ المحاولة...</span>';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--gray-500)">لم يتم إعداد الزامنة بعد</span>';
+  }
+  openModal('syncModal');
+}
+
+function saveSyncConfig() {
+  const cfg = {
+    orgId: document.getElementById('syncOrgId').value.trim() || 'default',
+    apiKey: document.getElementById('syncApiKey').value.trim(),
+    authDomain: document.getElementById('syncAuthDomain').value.trim(),
+    databaseURL: document.getElementById('syncDbUrl').value.trim(),
+    projectId: document.getElementById('syncProjectId').value.trim()
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    return alert('الرجاء إدخال API Key و Database URL على الأقل');
+  }
+  Sync.saveConfig(cfg);
+  const statusEl = document.getElementById('syncStatusModal');
+  statusEl.innerHTML = '<span style="color:var(--primary)">⏳ جارٍ الاتصال...</span>';
+  Sync.init((ok) => {
+    if (ok) {
+      statusEl.innerHTML = '<span style="color:var(--success)">✅ تم الاتصال بنجاح!</span>';
+      updateSyncStatus();
+      Sync.startRealtime();
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--danger)">❌ فشل الاتصال - تحقق من البيانات</span>';
+    }
+  });
+}
+
+function syncNow() {
+  const statusEl = document.getElementById('syncStatusModal');
+  statusEl.innerHTML = '<span style="color:var(--primary)">⏳ جارٍ رفع البيانات...</span>';
+  Sync.pushAll((ok) => {
+    if (ok) {
+      statusEl.innerHTML = '<span style="color:var(--success)">✅ تم رفع جميع البيانات بنجاح!</span>';
+      updateSyncStatus();
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--danger)">❌ فشل الرفع - تحقق من الاتصال</span>';
+    }
+  });
+}
+
+function pullSyncNow() {
+  const statusEl = document.getElementById('syncStatusModal');
+  if (!statusEl) return;
+  statusEl.innerHTML = '<span style="color:var(--primary)">⏳ جارٍ تحميل البيانات...</span>';
+  Sync.pullAll((ok, info) => {
+    if (ok) {
+      statusEl.innerHTML = '<span style="color:var(--success)">✅ تم التحميل - ' + (info.updated || 0) + ' حقل مُحدَّث</span>';
+      refreshCurrentPage();
+      updateSyncStatus();
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--danger)">❌ فشل التحميل</span>';
+    }
+  });
+}
+
+function updateSyncStatus() {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (Sync.connected) {
+    el.textContent = '🔄 زامنة مفعلة';
+    el.style.color = 'rgba(100,200,100,0.7)';
+  } else {
+    el.textContent = '';
+  }
+}
+
+function checkAutoSync() {
+  if (Sync.isConfigured()) {
+    Sync.init((ok) => {
+      if (ok) {
+        Sync.pullAll((ok2, info) => {
+          if (ok2 && info.updated > 0) {
+            refreshCurrentPage();
+          }
+          Sync.startRealtime();
+        });
+      }
+      updateSyncStatus();
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

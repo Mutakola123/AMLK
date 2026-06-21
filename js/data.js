@@ -28,6 +28,9 @@ const DB = {
   },
   _set(key, data) {
     localStorage.setItem(this._p(key), JSON.stringify(data));
+    if (typeof Sync !== 'undefined' && Sync.connected && Sync.db) {
+      Sync.push(key, data);
+    }
   },
   _nextId(items) {
     return items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;

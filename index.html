@@ -69,6 +69,8 @@
       <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
       <button class="btn btn-sm" style="padding:6px 10px;font-size:11px;width:100%;justify-content:center;background:rgba(255,255,255,0.1);color:white;margin-top:4px" onclick="document.getElementById('importFileInput').click()">📥 استيراد البيانات</button>
       <button class="btn btn-sm" style="padding:6px 10px;font-size:11px;width:100%;justify-content:center;background:rgba(255,255,255,0.1);color:white;margin-top:4px" onclick="openCompanyForm()">🏢 بيانات الشركة</button>
+      <button class="btn btn-sm" style="padding:6px 10px;font-size:11px;width:100%;justify-content:center;background:rgba(255,255,255,0.1);color:white;margin-top:4px" onclick="openSyncModal()">🔄 زامنة البيانات</button>
+      <div id="syncStatus" style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;text-align:center"></div>
     </div>
     <div class="nav-item" data-page="back" style="display:none" id="backNavItem">
       <span class="icon">🔙</span> رجوع
@@ -828,7 +830,68 @@
   </div>
 </div>
 
+<!-- Sync Modal -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3>🔄 إعداد زامنة البيانات (Firebase)</h3>
+      <button class="modal-close" onclick="closeModal('syncModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--primary-light);color:var(--primary);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;line-height:1.8">
+        <strong>الخطوات:</strong>
+        <ol style="margin:8px 0;padding-right:20px">
+          <li>اذهب إلى <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+          <li>أنشئ مشروع جديد (أو استخدم مشروع موجود)</li>
+          <li>من القائمة左侧 اختر <strong>Realtime Database</strong> ثم اضغط <strong>Create Database</strong></li>
+          <li>اختر موقع القاعدة (مثلاً us-central1)</li>
+          <li>في تبويب <strong>Rules</strong> اكتب القواعد التالية:</li>
+        </ol>
+        <pre style="background:white;padding:8px;border-radius:4px;font-size:12px;direction:ltr;text-align:left;margin:8px 0">{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</pre>
+        <ol start="6" style="margin:8px 0;padding-right:20px">
+          <li>من التبويب <strong>Settings</strong> → <strong>General</strong> → انسخ بيانات المشروع</li>
+          <li>الصق البيانات أدناه</li>
+        </ol>
+      </div>
+      <div class="form-group">
+        <label>اسم المجموعة (Org ID)</label>
+        <input type="text" id="syncOrgId" placeholder="مثال: my-company-1 (يجب أن يكون مidentical على كل الأجهزة)">
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="text" id="syncApiKey" placeholder="AIzaSy..." style="direction:ltr;text-align:left">
+      </div>
+      <div class="form-group">
+        <label>Auth Domain</label>
+        <input type="text" id="syncAuthDomain" placeholder="project-id.firebaseapp.com" style="direction:ltr;text-align:left">
+      </div>
+      <div class="form-group">
+        <label>Database URL</label>
+        <input type="text" id="syncDbUrl" placeholder="https://project-id-default-rtdb.firebaseio.com" style="direction:ltr;text-align:left">
+      </div>
+      <div class="form-group">
+        <label>Project ID</label>
+        <input type="text" id="syncProjectId" placeholder="project-id" style="direction:ltr;text-align:left">
+      </div>
+      <div id="syncStatusModal" style="font-size:12px;margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveSyncConfig()">💾 حفظ الإعدادات وتفعيل الزامنة</button>
+      <button class="btn btn-success" onclick="syncNow()">⬆️ رفع البيانات الآن</button>
+      <button class="btn" style="background:var(--gray-100)" onclick="closeModal('syncModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/sync.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </body>
 </html>
