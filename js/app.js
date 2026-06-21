@@ -56,6 +56,11 @@ function setupEvents() {
       if (e.target === m) closeModal(m.id);
     });
   });
+
+  ['voucherType','voucherAmount','voucherDesc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateVoucherPreview);
+  });
 }
 
 function showPage(page) {
@@ -98,9 +103,8 @@ function renderPage(page) {
   } catch (e) { console.warn('renderPage error:', page, e); }
 }
 
-function renderAll() {
-  const pages = ['dashboard','properties','tenants','contracts','payments','maintenance','vouchers','finance','users'];
-  pages.forEach(p => { try { renderPage(p); } catch(e) {} });
+function refreshCurrentPage() {
+  try { renderPage(currentPage); } catch(e) {}
 }
 
 // ---- Dashboard ----
@@ -375,8 +379,7 @@ function saveProperty() {
   if (!data.name) return alert('الرجاء إدخال اسم العقار');
   DB.saveProperty(data);
   closeModal('propertyModal');
-  renderProperties();
-  renderDashboard();
+  refreshCurrentPage();
 }
 
 function editProperty(id) {
@@ -387,8 +390,7 @@ function editProperty(id) {
 function deleteProperty(id) {
   if (confirm('هل أنت متأكد من حذف هذا العقار؟')) {
     DB.deleteProperty(id);
-    renderProperties();
-    renderDashboard();
+    refreshCurrentPage();
   }
 }
 
@@ -603,9 +605,7 @@ function saveUnit() {
   if (!data.name) return alert('الرجاء إدخال اسم الوحدة');
   DB.saveUnit(data);
   closeModal('unitModal');
-  renderPropertyDetail(currentPropertyId);
-  renderProperties();
-  renderDashboard();
+  refreshCurrentPage();
 }
 
 function editUnit(id) {
@@ -616,9 +616,7 @@ function editUnit(id) {
 function deleteUnit(id) {
   if (confirm('هل أنت متأكد من حذف هذه الوحدة؟')) {
     DB.deleteUnit(id);
-    renderPropertyDetail(currentPropertyId);
-    renderProperties();
-    renderDashboard();
+    refreshCurrentPage();
   }
 }
 
@@ -669,8 +667,7 @@ function saveTenant() {
   if (!data.name) return alert('الرجاء إدخال اسم المستأجر');
   DB.saveTenant(data);
   closeModal('tenantModal');
-  renderTenants();
-  renderDashboard();
+  refreshCurrentPage();
 }
 
 function editTenant(id) {
@@ -681,8 +678,7 @@ function editTenant(id) {
 function deleteTenant(id) {
   if (confirm('هل أنت متأكد من حذف هذا المستأجر؟')) {
     DB.deleteTenant(id);
-    renderTenants();
-    renderDashboard();
+    refreshCurrentPage();
   }
 }
 
@@ -816,8 +812,7 @@ function saveContract() {
   }
 
   closeModal('contractModal');
-  renderContracts();
-  renderDashboard();
+  refreshCurrentPage();
 }
 
 function editContract(id) {
@@ -828,8 +823,7 @@ function editContract(id) {
 function deleteContract(id) {
   if (confirm('هل أنت متأكد من حذف هذا العقد؟')) {
     DB.deleteContract(id);
-    renderContracts();
-    renderDashboard();
+    refreshCurrentPage();
   }
 }
 
@@ -935,11 +929,7 @@ function savePayment() {
     reference: contract ? `عقد #${contract.id}` : ''
   });
   closeModal('paymentModal');
-  renderPayments();
-  renderVouchers();
-  renderDashboard();
-  const p = document.getElementById(`page-${currentPage}`);
-  if (p && currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+  refreshCurrentPage();
 }
 
 function markUnpaid() {
@@ -953,9 +943,7 @@ function markUnpaid() {
   inst.notes = '';
   DB.saveInstallment(inst);
   closeModal('paymentModal');
-  renderPayments();
-  renderDashboard();
-  if (currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+  refreshCurrentPage();
 }
 
 // ---- Maintenance ----
@@ -1010,8 +998,7 @@ function saveMaintenance() {
   if (!data.title || !data.propertyId) return alert('الرجاء إدخال عنوان الطلب واختيار العقار');
   DB.saveMaintenance(data);
   closeModal('maintenanceModal');
-  renderMaintenance();
-  renderDashboard();
+  refreshCurrentPage();
 }
 
 function editMaintenance(id) {
@@ -1022,8 +1009,7 @@ function editMaintenance(id) {
 function deleteMaintenance(id) {
   if (confirm('هل أنت متأكد من حذف طلب الصيانة هذا؟')) {
     DB.deleteMaintenance(id);
-    renderMaintenance();
-    renderDashboard();
+    refreshCurrentPage();
   }
 }
 
@@ -1305,10 +1291,6 @@ function openVoucherForm(data) {
   document.getElementById('modalTitle_voucher').textContent = data ? 'تعديل السند' : 'إضافة سند جديد';
   updateVoucherPreview();
   openModal('voucherModal');
-  // Live preview on input
-  ['voucherType','voucherAmount','voucherDesc'].forEach(id => {
-    document.getElementById(id).addEventListener('input', updateVoucherPreview, { once: false });
-  });
 }
 
 function saveVoucher() {
