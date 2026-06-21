@@ -64,6 +64,33 @@ function setupEvents() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updateVoucherPreview);
   });
+
+  var btnMap = {
+    'propertyModal': saveProperty,
+    'tenantModal': saveTenant,
+    'contractModal': saveContract,
+    'paymentModal': savePayment,
+    'maintenanceModal': saveMaintenance,
+    'unitModal': saveUnit,
+    'voucherModal': saveVoucher,
+    'finEntryModal': saveFinEntry,
+    'userModal': saveUser,
+    'companyModal': saveCompany
+  };
+  Object.keys(btnMap).forEach(modalId => {
+    var modal = document.getElementById(modalId);
+    if (!modal) return;
+    var btns = modal.querySelectorAll('.modal-footer .btn-primary');
+    btns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        btnMap[modalId]();
+      });
+    });
+  });
+
+  var payUnpaid = document.getElementById('payUnpaidBtn');
+  if (payUnpaid) payUnpaid.addEventListener('click', function(e) { e.preventDefault(); markUnpaid(); });
 }
 
 function showPage(page) {
@@ -1301,6 +1328,7 @@ function openVoucherForm(data) {
 }
 
 function saveVoucher() {
+  try {
   const type = document.getElementById('voucherType').value;
   const date = document.getElementById('voucherDate').value;
   const amount = document.getElementById('voucherAmount').value;
@@ -1319,8 +1347,8 @@ function saveVoucher() {
   const data = { id: editingId || null, type, date, amount, description: desc, person: document.getElementById('voucherPerson').value.trim(), reference: ref };
   const saved = DB.saveVoucher(data);
   closeModal('voucherModal');
-  renderVouchers();
-  if (currentPage === 'property-detail') renderPropertyDetail(currentPropertyId);
+  refreshCurrentPage();
+  } catch(e) { alert('خطأ في حفظ السند: ' + e.message); }
 }
 
 function editVoucher(id) {
