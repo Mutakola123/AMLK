@@ -1433,7 +1433,7 @@ function printVoucher(id) {
               <div class="label">${isReceipt ? 'المبلغ المقبوض' : 'المبلغ المدفوع'}</div>
               <div class="label-en">${isReceipt ? 'Amount Received' : 'Amount Paid'}</div>
             </div>
-            <div class="amount">${Number(v.amount || 0).toLocaleString()} SAR</div>
+            <div class="amount">${Number(v.amount || 0).toLocaleString('en-US')} SAR</div>
           </div>
           <div class="v-amount-words">
             <div class="ar">${amountWords} ريالاً سعودياً فقط لا غير</div>
