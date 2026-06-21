@@ -1290,111 +1290,127 @@ function printVoucher(id) {
   const isReceipt = v.type === 'قبض';
   const mainColor = isReceipt ? '#0f7b46' : '#c62828';
   const lightBg = isReceipt ? '#f0faf4' : '#fdf2f2';
+  const typeAr = isReceipt ? 'قبض' : 'صرف';
+  const typeEn = isReceipt ? 'RECEIPT' : 'PAYMENT VOUCHER';
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - سند ${v.type}</title>
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${typeEn}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap');
       * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:'Noto Naskh Arabic','Segoe UI',sans-serif; background:#e8e8e8; padding:20px; }
+      body { font-family:'Segoe UI',Tahoma,sans-serif; background:#e8e8e8; padding:20px; }
       .voucher { max-width:750px; margin:0 auto; background:white; border-radius:4px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
-      .v-top-bar { background:${mainColor}; color:white; padding:6px 24px; display:flex; justify-content:space-between; font-size:12px; }
+      .v-top-bar { background:${mainColor}; color:white; padding:6px 24px; display:flex; justify-content:space-between; font-size:11px; }
+      .v-top-bar .en { direction:ltr; }
       .v-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid ${mainColor}; }
-      .v-company { display:flex; align-items:center; gap:16px; }
-      .v-company-logo { font-size:48px; }
-      .v-company-info h2 { font-size:20px; color:#1a1a1a; margin-bottom:2px; }
-      .v-company-info p { font-size:12px; color:#666; line-height:1.6; }
-      .v-type-badge { background:${mainColor}; color:white; padding:10px 24px; border-radius:8px; text-align:center; }
-      .v-type-badge .icon { font-size:28px; }
-      .v-type-badge .text { font-size:16px; font-weight:700; margin-top:4px; }
-      .v-type-badge .num { font-size:11px; opacity:0.8; margin-top:2px; font-family:monospace; }
+      .v-company { display:flex; align-items:center; gap:16px; flex:1; }
+      .v-company-logo { font-size:44px; }
+      .v-company-info h2 { font-size:18px; color:#1a1a1a; }
+      .v-company-info .en-name { font-size:12px; color:#888; direction:ltr; text-align:left; }
+      .v-company-info p { font-size:11px; color:#666; line-height:1.6; direction:ltr; text-align:left; }
+      .v-type-box { background:${mainColor}; color:white; padding:12px 20px; border-radius:8px; text-align:center; min-width:120px; }
+      .v-type-box .type-icon { font-size:26px; }
+      .v-type-box .type-ar { font-size:15px; font-weight:700; margin-top:2px; }
+      .v-type-box .type-en { font-size:10px; opacity:0.85; letter-spacing:1px; }
+      .v-type-box .type-num { font-size:11px; margin-top:4px; font-family:monospace; opacity:0.9; }
       .v-body { padding:24px; }
-      .v-amount-box { background:${lightBg}; border:2px solid ${mainColor}; border-radius:12px; padding:20px; text-align:center; margin-bottom:20px; }
-      .v-amount-box .label { font-size:13px; color:#666; margin-bottom:4px; }
-      .v-amount-box .amount { font-size:36px; font-weight:700; color:${mainColor}; }
-      .v-amount-box .currency { font-size:16px; color:#666; }
-      .v-words { background:#f8f9fa; border:1px dashed #ccc; border-radius:8px; padding:12px 16px; margin:12px 0 20px; text-align:center; font-size:15px; color:#444; }
-      .v-words strong { color:${mainColor}; }
+      .v-amount-section { background:${lightBg}; border:2px solid ${mainColor}; border-radius:10px; padding:16px 20px; margin-bottom:16px; }
+      .v-amount-main { display:flex; justify-content:space-between; align-items:center; }
+      .v-amount-main .label { font-size:13px; color:#666; }
+      .v-amount-main .label-en { font-size:11px; color:#999; direction:ltr; }
+      .v-amount-main .amount { font-size:32px; font-weight:700; color:${mainColor}; direction:ltr; }
+      .v-amount-words { text-align:center; padding:10px; background:white; border:1px dashed #ccc; border-radius:6px; margin-top:10px; font-size:13px; }
+      .v-amount-words .ar { color:#333; font-weight:600; }
+      .v-amount-words .en { color:#888; font-size:11px; direction:ltr; display:block; margin-top:2px; }
       .v-details { border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; margin-bottom:20px; }
-      .v-detail-row { display:flex; border-bottom:1px solid #e0e0e0; }
-      .v-detail-row:last-child { border-bottom:none; }
-      .v-detail-label { width:140px; padding:10px 16px; background:#f5f5f5; font-size:13px; color:#666; font-weight:600; }
-      .v-detail-value { flex:1; padding:10px 16px; font-size:14px; color:#1a1a1a; }
-      .v-signatures { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:32px; padding-top:20px; }
+      .v-row { display:flex; border-bottom:1px solid #e0e0e0; }
+      .v-row:last-child { border-bottom:none; }
+      .v-cell { flex:1; padding:10px 14px; font-size:13px; }
+      .v-cell.lbl { background:#f8f8f8; color:#888; font-weight:600; font-size:12px; }
+      .v-cell.lbl .en { font-size:10px; color:#aaa; display:block; direction:ltr; text-align:left; }
+      .v-cell.val { color:#1a1a1a; }
+      .v-cell.wide { flex:3; }
+      .v-signatures { display:grid; grid-template-columns:1fr 1fr; gap:60px; margin-top:28px; padding-top:16px; }
       .v-sig-box { text-align:center; }
-      .v-sig-line { border-top:1px solid #333; margin:0 20px 8px; }
-      .v-sig-label { font-size:12px; color:#666; }
-      .v-footer { background:#f5f5f5; padding:10px 24px; display:flex; justify-content:space-between; font-size:11px; color:#999; border-top:1px solid #e0e0e0; }
-      @media print {
-        body { background:white; padding:0; }
-        .voucher { box-shadow:none; max-width:100%; }
-        .v-top-bar { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      }
+      .v-sig-line { border-top:1px solid #333; margin:0 16px 6px; }
+      .v-sig-label { font-size:11px; color:#666; }
+      .v-sig-label .en { font-size:10px; color:#aaa; display:block; direction:ltr; }
+      .v-footer { background:#f5f5f5; padding:8px 24px; display:flex; justify-content:space-between; font-size:10px; color:#999; border-top:1px solid #e0e0e0; direction:ltr; }
+      @media print { body { background:white; padding:0; } .voucher { box-shadow:none; max-width:100%; } }
     </style>
   </head><body>
     <div class="voucher">
       <div class="v-top-bar">
         <span>${company.name || ''}</span>
-        <span>سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</span>
+        <span class="en">${typeEn} VOUCHER</span>
       </div>
       <div class="v-header">
         <div class="v-company">
           <div class="v-company-logo">🏢</div>
           <div class="v-company-info">
             <h2>${company.name || 'المؤسسة العقارية'}</h2>
+            <div class="en-name">${company.name || 'Real Estate Company'}</div>
             <p>
-              ${company.address ? '📍 ' + company.address : ''}
-              ${company.phone ? ' | 📱 ' + company.phone : ''}
-              ${company.email ? ' | ✉️ ' + company.email : ''}
-              ${company.cr ? '<br>السجل التجاري: ' + company.cr : ''}
-              ${company.vat ? ' | الرخصة الضريبية: ' + company.vat : ''}
+              ${company.address ? company.address : ''}
+              ${company.phone ? ' | Tel: ' + company.phone : ''}
+              ${company.email ? ' | ' + company.email : ''}
+              ${company.cr ? '<br>CR: ' + company.cr : ''}
+              ${company.vat ? ' | VAT: ' + company.vat : ''}
             </p>
           </div>
         </div>
-        <div class="v-type-badge">
-          <div class="icon">${isReceipt ? '📥' : '📤'}</div>
-          <div class="text">سند ${isReceipt ? 'قبض' : 'صرف'}</div>
-          <div class="num">${v.number || ''}</div>
+        <div class="v-type-box">
+          <div class="type-icon">${isReceipt ? '📥' : '📤'}</div>
+          <div class="type-ar">سند ${typeAr}</div>
+          <div class="type-en">${typeEn}</div>
+          <div class="type-num">${v.number || ''}</div>
         </div>
       </div>
       <div class="v-body">
-        <div class="v-amount-box">
-          <div class="label">${isReceipt ? 'المبلغ المقبوض' : 'المبلغ المدفوع'}</div>
-          <div class="amount">${Number(v.amount || 0).toLocaleString()} <span class="currency">ريال سعودي</span></div>
+        <div class="v-amount-section">
+          <div class="v-amount-main">
+            <div>
+              <div class="label">${isReceipt ? 'المبلغ المقبوض' : 'المبلغ المدفوع'}</div>
+              <div class="label-en">${isReceipt ? 'Amount Received' : 'Amount Paid'}</div>
+            </div>
+            <div class="amount">${Number(v.amount || 0).toLocaleString()} SAR</div>
+          </div>
+          <div class="v-amount-words">
+            <div class="ar">${amountWords} ريالاً سعودياً فقط لا غير</div>
+            <div class="en">Say: ${amountWords} Saudi Riyals Only</div>
+          </div>
         </div>
-        <div class="v-words">المبلغ بالحروف: <strong>${amountWords} ريالاً سعودياً فقط لا غير</strong></div>
         <div class="v-details">
-          <div class="v-detail-row">
-            <div class="v-detail-label">التاريخ</div>
-            <div class="v-detail-value">${v.date || '—'}</div>
-            <div class="v-detail-label">رقم السند</div>
-            <div class="v-detail-value" style="font-family:monospace;font-weight:700">${v.number || '—'}</div>
+          <div class="v-row">
+            <div class="v-cell lbl">التاريخ<span class="en">Date</span></div>
+            <div class="v-cell val">${v.date || '—'}</div>
+            <div class="v-cell lbl">رقم السند<span class="en">Voucher No.</span></div>
+            <div class="v-cell val" style="font-weight:700;font-family:monospace">${v.number || '—'}</div>
           </div>
-          <div class="v-detail-row">
-            <div class="v-detail-label">البيان</div>
-            <div class="v-detail-value" style="grid-column:span 3">${v.description || '—'}</div>
+          <div class="v-row">
+            <div class="v-cell lbl">البيان<span class="en">Description</span></div>
+            <div class="v-cell val wide">${v.description || '—'}</div>
           </div>
-          ${v.reference ? `<div class="v-detail-row">
-            <div class="v-detail-label">المرجع</div>
-            <div class="v-detail-value">${v.reference}</div>
-            <div class="v-detail-label">طريقة الدفع</div>
-            <div class="v-detail-value">نقدي</div>
+          ${v.reference ? `<div class="v-row">
+            <div class="v-cell lbl">المرجع<span class="en">Reference</span></div>
+            <div class="v-cell val">${v.reference}</div>
+            <div class="v-cell lbl">طريقة الدفع<span class="en">Payment</span></div>
+            <div class="v-cell val">نقدي / Cash</div>
           </div>` : ''}
         </div>
         <div class="v-signatures">
           <div class="v-sig-box">
             <div class="v-sig-line"></div>
-            <div class="v-sig-label">${isReceipt ? 'المدير / المستلم' : 'المحاسب / المدفوع له'}</div>
+            <div class="v-sig-label">${isReceipt ? 'المدير / المستلم' : 'المحاسب'}<span class="en">${isReceipt ? 'Manager / Received by' : 'Accountant'}</span></div>
           </div>
           <div class="v-sig-box">
             <div class="v-sig-line"></div>
-            <div class="v-sig-label">${isReceipt ? 'المحاسب / المدفوع له' : 'المدير / المدير المفوض'}</div>
+            <div class="v-sig-label">${isReceipt ? 'المحاسب' : 'المدير المفوض'}<span class="en">${isReceipt ? 'Accountant' : 'Authorized Manager'}</span></div>
           </div>
         </div>
       </div>
       <div class="v-footer">
-        <span>تم الإصدار: ${new Date().toLocaleDateString('ar-SA')} - ${new Date().toLocaleTimeString('ar-SA')}</span>
+        <span>Issued: ${new Date().toLocaleDateString('en-US')} - ${new Date().toLocaleTimeString('en-US')}</span>
         <span>${company.name || ''}</span>
-        <span>صفحة 1 من 1</span>
+        <span>Page 1 of 1</span>
       </div>
     </div>
     <script>window.onload=function(){window.print()}<\/script>
