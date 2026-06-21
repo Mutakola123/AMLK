@@ -9,9 +9,11 @@ function init() {
   }
 }
 
+let renderedPages = {};
+
 function startApp() {
   DB.init();
-  renderAll();
+  renderedPages = {};
   setupEvents();
   showPage('dashboard');
 }
@@ -44,7 +46,6 @@ function setupEvents() {
       const page = item.dataset.page;
       if (page === 'back') { showPropertyList(); return; }
       showPage(page);
-      closeSidebar();
     });
   });
 
@@ -76,6 +77,7 @@ function showPage(page) {
   }
 
   renderPage(page);
+  closeSidebar();
 }
 
 function renderPage(page) {
@@ -92,13 +94,13 @@ function renderPage(page) {
       case 'finance': renderFinance(); break;
       case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
     }
+    renderedPages[page] = true;
   } catch (e) { console.warn('renderPage error:', page, e); }
 }
 
 function renderAll() {
-  ['renderDashboard','renderProperties','renderTenants','renderContracts','renderPayments','renderMaintenance','renderVouchers','renderFinance','renderUsers'].forEach(name => {
-    try { window[name](); } catch (e) { console.warn('renderAll error:', name, e); }
-  });
+  const pages = ['dashboard','properties','tenants','contracts','payments','maintenance','vouchers','finance','users'];
+  pages.forEach(p => { try { renderPage(p); } catch(e) {} });
 }
 
 // ---- Dashboard ----
