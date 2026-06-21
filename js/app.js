@@ -1287,58 +1287,114 @@ function printVoucher(id) {
   if (!v) return;
   const company = DB.getCompany();
   const amountWords = numberToArabicWords(Number(v.amount || 0));
+  const isReceipt = v.type === 'قبض';
+  const mainColor = isReceipt ? '#0f7b46' : '#c62828';
+  const lightBg = isReceipt ? '#f0faf4' : '#fdf2f2';
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${v.type}</title>
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - سند ${v.type}</title>
     <style>
-      body { font-family: 'Segoe UI',sans-serif; padding:0; margin:0; background:#f5f5f5; }
-      .vp { padding:40px; max-width:700px; margin:40px auto; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); border-radius:12px; }
-      .vp-org { text-align:center; border-bottom:3px double #202124; padding-bottom:20px; margin-bottom:24px; }
-      .vp-org h1 { margin:0 0 4px; font-size:24px; color:#202124; }
-      .vp-org .sub { font-size:13px; color:#5f6368; line-height:1.8; }
-      .vp-hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid ${v.type === 'قبض' ? '#0f9d58' : '#d93025'}; padding-bottom:12px; margin-bottom:20px; }
-      .vp-hdr .t { font-size:24px; font-weight:700; }
-      .vp-hdr .n { font-size:14px; color:#5f6368; font-family:monospace; text-align:left; }
-      .vp-amt { font-size:32px; font-weight:700; text-align:center; padding:20px; background:#f8f9fa; border-radius:12px; margin-bottom:8px; border:2px solid ${v.type === 'قبض' ? '#0f9d58' : '#d93025'}; }
-      .vp-words { text-align:center; font-size:16px; color:#5f6368; padding:12px; background:#fafafa; border-radius:8px; margin-bottom:24px; border:1px dashed #dadce0; }
-      .vp-words span { font-weight:600; color:#202124; }
-      .vp-desc { font-size:16px; line-height:2; padding:16px; border:1px solid #dadce0; border-radius:8px; min-height:60px; margin-bottom:24px; }
-      .vp-refs { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; font-size:14px; color:#5f6368; }
-      .vp-refs div { padding:8px 12px; background:#f8f9fa; border-radius:6px; }
-      .vp-refs strong { color:#202124; }
-      .vp-ftr { display:flex; justify-content:space-between; align-items:end; font-size:12px; color:#9aa0a6; border-top:1px solid #dadce0; padding-top:16px; margin-top:24px; }
-      .vp-sig { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; text-align:center; }
-      .vp-sig div { border-top:1px solid #dadce0; padding-top:8px; font-size:13px; color:#5f6368; }
-      @media print { body { background:white; } .vp { box-shadow:none; margin:0; border-radius:0; max-width:100%; } }
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap');
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Noto Naskh Arabic','Segoe UI',sans-serif; background:#e8e8e8; padding:20px; }
+      .voucher { max-width:750px; margin:0 auto; background:white; border-radius:4px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+      .v-top-bar { background:${mainColor}; color:white; padding:6px 24px; display:flex; justify-content:space-between; font-size:12px; }
+      .v-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid ${mainColor}; }
+      .v-company { display:flex; align-items:center; gap:16px; }
+      .v-company-logo { font-size:48px; }
+      .v-company-info h2 { font-size:20px; color:#1a1a1a; margin-bottom:2px; }
+      .v-company-info p { font-size:12px; color:#666; line-height:1.6; }
+      .v-type-badge { background:${mainColor}; color:white; padding:10px 24px; border-radius:8px; text-align:center; }
+      .v-type-badge .icon { font-size:28px; }
+      .v-type-badge .text { font-size:16px; font-weight:700; margin-top:4px; }
+      .v-type-badge .num { font-size:11px; opacity:0.8; margin-top:2px; font-family:monospace; }
+      .v-body { padding:24px; }
+      .v-amount-box { background:${lightBg}; border:2px solid ${mainColor}; border-radius:12px; padding:20px; text-align:center; margin-bottom:20px; }
+      .v-amount-box .label { font-size:13px; color:#666; margin-bottom:4px; }
+      .v-amount-box .amount { font-size:36px; font-weight:700; color:${mainColor}; }
+      .v-amount-box .currency { font-size:16px; color:#666; }
+      .v-words { background:#f8f9fa; border:1px dashed #ccc; border-radius:8px; padding:12px 16px; margin:12px 0 20px; text-align:center; font-size:15px; color:#444; }
+      .v-words strong { color:${mainColor}; }
+      .v-details { border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; margin-bottom:20px; }
+      .v-detail-row { display:flex; border-bottom:1px solid #e0e0e0; }
+      .v-detail-row:last-child { border-bottom:none; }
+      .v-detail-label { width:140px; padding:10px 16px; background:#f5f5f5; font-size:13px; color:#666; font-weight:600; }
+      .v-detail-value { flex:1; padding:10px 16px; font-size:14px; color:#1a1a1a; }
+      .v-signatures { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:32px; padding-top:20px; }
+      .v-sig-box { text-align:center; }
+      .v-sig-line { border-top:1px solid #333; margin:0 20px 8px; }
+      .v-sig-label { font-size:12px; color:#666; }
+      .v-footer { background:#f5f5f5; padding:10px 24px; display:flex; justify-content:space-between; font-size:11px; color:#999; border-top:1px solid #e0e0e0; }
+      @media print {
+        body { background:white; padding:0; }
+        .voucher { box-shadow:none; max-width:100%; }
+        .v-top-bar { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      }
     </style>
   </head><body>
-    <div class="vp">
-      <div class="vp-org">
-        <div style="font-size:42px;margin-bottom:8px">🏢</div>
-        <h1>${company.name || 'المؤسسة العقارية'}</h1>
-        <div class="sub">
-          ${company.address ? '📍 ' + company.address + '<br>' : ''}
-          ${company.phone ? '📱 ' + company.phone : ''} ${company.email ? '| ✉️ ' + company.email : ''}
-          ${company.cr ? '<br>س.ت: ' + company.cr : ''}
+    <div class="voucher">
+      <div class="v-top-bar">
+        <span>${company.name || ''}</span>
+        <span>سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</span>
+      </div>
+      <div class="v-header">
+        <div class="v-company">
+          <div class="v-company-logo">🏢</div>
+          <div class="v-company-info">
+            <h2>${company.name || 'المؤسسة العقارية'}</h2>
+            <p>
+              ${company.address ? '📍 ' + company.address : ''}
+              ${company.phone ? ' | 📱 ' + company.phone : ''}
+              ${company.email ? ' | ✉️ ' + company.email : ''}
+              ${company.cr ? '<br>السجل التجاري: ' + company.cr : ''}
+              ${company.vat ? ' | الرخصة الضريبية: ' + company.vat : ''}
+            </p>
+          </div>
+        </div>
+        <div class="v-type-badge">
+          <div class="icon">${isReceipt ? '📥' : '📤'}</div>
+          <div class="text">سند ${isReceipt ? 'قبض' : 'صرف'}</div>
+          <div class="num">${v.number || ''}</div>
         </div>
       </div>
-      <div class="vp-hdr">
-        <div class="t" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${v.type === 'قبض' ? '📥' : '📤'} سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</div>
-        <div class="n">
-          <div style="font-size:16px;font-weight:700">${v.number || ''}</div>
-          <div>${v.date || ''}</div>
+      <div class="v-body">
+        <div class="v-amount-box">
+          <div class="label">${isReceipt ? 'المبلغ المقبوض' : 'المبلغ المدفوع'}</div>
+          <div class="amount">${Number(v.amount || 0).toLocaleString()} <span class="currency">ريال سعودي</span></div>
+        </div>
+        <div class="v-words">المبلغ بالحروف: <strong>${amountWords} ريالاً سعودياً فقط لا غير</strong></div>
+        <div class="v-details">
+          <div class="v-detail-row">
+            <div class="v-detail-label">التاريخ</div>
+            <div class="v-detail-value">${v.date || '—'}</div>
+            <div class="v-detail-label">رقم السند</div>
+            <div class="v-detail-value" style="font-family:monospace;font-weight:700">${v.number || '—'}</div>
+          </div>
+          <div class="v-detail-row">
+            <div class="v-detail-label">البيان</div>
+            <div class="v-detail-value" style="grid-column:span 3">${v.description || '—'}</div>
+          </div>
+          ${v.reference ? `<div class="v-detail-row">
+            <div class="v-detail-label">المرجع</div>
+            <div class="v-detail-value">${v.reference}</div>
+            <div class="v-detail-label">طريقة الدفع</div>
+            <div class="v-detail-value">نقدي</div>
+          </div>` : ''}
+        </div>
+        <div class="v-signatures">
+          <div class="v-sig-box">
+            <div class="v-sig-line"></div>
+            <div class="v-sig-label">${isReceipt ? 'المدير / المستلم' : 'المحاسب / المدفوع له'}</div>
+          </div>
+          <div class="v-sig-box">
+            <div class="v-sig-line"></div>
+            <div class="v-sig-label">${isReceipt ? 'المحاسب / المدفوع له' : 'المدير / المدير المفوض'}</div>
+          </div>
         </div>
       </div>
-      <div class="vp-amt" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${Number(v.amount || 0).toLocaleString()} ر.س</div>
-      <div class="vp-words">المبلغ نظراً: <span>${amountWords} ريالاً سعودياً فقط لا غير</span></div>
-      <div class="vp-desc"><strong>البيان:</strong> ${v.description || '—'}</div>
-      ${v.reference ? `<div class="vp-refs"><div><strong>المرجع:</strong> ${v.reference}</div><div><strong>رقم السند:</strong> ${v.number || ''}</div></div>` : ''}
-      <div class="vp-ftr">
-        <span>تاريخ الإصدار: ${v.date || ''}</span>
-        <span>تم الإصدار في: ${new Date().toLocaleDateString('ar-SA')} ${new Date().toLocaleTimeString('ar-SA')}</span>
-      </div>
-      <div class="vp-sig">
-        <div>المدير / الحاصل على المبلغ</div>
-        <div>المدير / صاحب الصلاحية</div>
+      <div class="v-footer">
+        <span>تم الإصدار: ${new Date().toLocaleDateString('ar-SA')} - ${new Date().toLocaleTimeString('ar-SA')}</span>
+        <span>${company.name || ''}</span>
+        <span>صفحة 1 من 1</span>
       </div>
     </div>
     <script>window.onload=function(){window.print()}<\/script>
@@ -1503,6 +1559,7 @@ function openCompanyForm() {
   document.getElementById('companyPhone').value = c.phone || '';
   document.getElementById('companyEmail').value = c.email || '';
   document.getElementById('companyCR').value = c.cr || '';
+  document.getElementById('companyVAT').value = c.vat || '';
   openModal('companyModal');
 }
 
@@ -1512,7 +1569,8 @@ function saveCompany() {
     address: document.getElementById('companyAddress').value.trim(),
     phone: document.getElementById('companyPhone').value.trim(),
     email: document.getElementById('companyEmail').value.trim(),
-    cr: document.getElementById('companyCR').value.trim()
+    cr: document.getElementById('companyCR').value.trim(),
+    vat: document.getElementById('companyVAT').value.trim()
   };
   DB.saveCompany(data);
   closeModal('companyModal');

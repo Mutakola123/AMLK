@@ -312,7 +312,7 @@ const DB = {
 
   // بيانات الشركة
   getCompany() {
-    try { return JSON.parse(localStorage.getItem('_company')) || { name: '', address: '', phone: '', email: '', cr: '' }; } catch { return { name: '', address: '', phone: '', email: '', cr: '' }; }
+    try { return JSON.parse(localStorage.getItem('_company')) || { name: '', address: '', phone: '', email: '', cr: '', vat: '' }; } catch { return { name: '', address: '', phone: '', email: '', cr: '', vat: '' }; }
   },
   saveCompany(c) {
     localStorage.setItem('_company', JSON.stringify(c));
