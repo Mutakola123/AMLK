@@ -1364,7 +1364,7 @@ function printVoucher(id) {
       .v-top-bar .en { direction:ltr; }
       .v-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid ${mainColor}; }
       .v-company { display:flex; align-items:center; gap:16px; flex:1; }
-      .v-company-logo { font-size:44px; }
+      .v-company-logo { font-size:44px; min-width:100px; min-height:100px; display:flex; align-items:center; justify-content:center; }
       .v-company-info h2 { font-size:18px; color:#1a1a1a; }
       .v-company-info .en-name { font-size:12px; color:#888; direction:ltr; text-align:left; }
       .v-company-info p { font-size:11px; color:#666; line-height:1.6; direction:ltr; text-align:left; }
@@ -1406,7 +1406,7 @@ function printVoucher(id) {
       </div>
       <div class="v-header">
         <div class="v-company">
-          <div class="v-company-logo">${company.logo ? '<img src="' + company.logo + '" style="width:56px;height:56px;border-radius:8px;object-fit:contain">' : '🏢'}</div>
+          <div class="v-company-logo">${company.logo ? '<img src="' + company.logo + '" style="width:100px;height:100px;border-radius:10px;object-fit:contain">' : '🏢'}</div>
           <div class="v-company-info">
             <h2>${company.name || 'المؤسسة العقارية'}</h2>
             <div class="en-name">${company.name || 'Real Estate Company'}</div>
