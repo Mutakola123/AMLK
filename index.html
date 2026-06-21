@@ -206,24 +206,29 @@
 
     <!-- Vouchers -->
     <div class="page" id="page-vouchers">
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
         <div class="stat-card">
-          <div class="label">إجمالي سندات القبض</div>
+          <div class="label">📥 إجمالي سندات القبض</div>
           <div class="value" id="vstatReceipt" style="color:var(--success)">0</div>
         </div>
         <div class="stat-card">
-          <div class="label">إجمالي سندات الصرف</div>
+          <div class="label">📤 إجمالي سندات الصرف</div>
           <div class="value" id="vstatPayment" style="color:var(--danger)">0</div>
         </div>
         <div class="stat-card">
-          <div class="label">الرصيد (قبض - صرف)</div>
+          <div class="label">📋 إجمالي سندات المطالبة</div>
+          <div class="value" id="vstatClaim" style="color:var(--info)">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">💰 الرصيد (قبض - صرف)</div>
           <div class="value" id="vstatBalance" style="color:var(--primary)">0</div>
         </div>
       </div>
       <div class="tabs" id="voucherTabs">
         <button class="tab active" data-vtype="all" onclick="filterVouchers('all')">الكل</button>
-        <button class="tab" data-vtype="قبض" onclick="filterVouchers('قبض')">سندات قبض</button>
-        <button class="tab" data-vtype="صرف" onclick="filterVouchers('صرف')">سندات صرف</button>
+        <button class="tab" data-vtype="قبض" onclick="filterVouchers('قبض')">📥 سندات قبض</button>
+        <button class="tab" data-vtype="صرف" onclick="filterVouchers('صرف')">📤 سندات صرف</button>
+        <button class="tab" data-vtype="مطالبة" onclick="filterVouchers('مطالبة')">📋 سندات مطالبة</button>
       </div>
       <div class="table-container">
         <div class="table-header">
@@ -656,6 +661,7 @@
           <select id="voucherType" onchange="updateVoucherPreview()">
             <option value="قبض">📥 سند قبض</option>
             <option value="صرف">📤 سند صرف</option>
+            <option value="مطالبة">📋 سند مطالبة</option>
           </select>
         </div>
         <div class="form-group">

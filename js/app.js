@@ -1041,9 +1041,12 @@ function filterVouchers(type) {
 function renderVoucherStats(items) {
   const receiptTotal = items.filter(v => v.type === 'قبض').reduce((s, v) => s + Number(v.amount || 0), 0);
   const paymentTotal = items.filter(v => v.type === 'صرف').reduce((s, v) => s + Number(v.amount || 0), 0);
+  const claimTotal = items.filter(v => v.type === 'مطالبة').reduce((s, v) => s + Number(v.amount || 0), 0);
   document.getElementById('vstatReceipt').textContent = receiptTotal.toLocaleString() + ' ر.س';
   document.getElementById('vstatPayment').textContent = paymentTotal.toLocaleString() + ' ر.س';
   document.getElementById('vstatBalance').textContent = (receiptTotal - paymentTotal).toLocaleString() + ' ر.س';
+  const claimEl = document.getElementById('vstatClaim');
+  if (claimEl) claimEl.textContent = claimTotal.toLocaleString() + ' ر.س';
 }
 
 function renderVouchers() {
@@ -1057,7 +1060,7 @@ function renderVouchers() {
   }
   tbody.innerHTML = filtered.map(v => `<tr>
     <td style="font-weight:600;font-family:monospace;direction:ltr">${v.number || '—'}</td>
-    <td><span class="badge ${v.type === 'قبض' ? 'badge-success' : 'badge-warning'}">${v.type === 'قبض' ? '📥 قبض' : '📤 صرف'}</span></td>
+    <td><span class="badge ${v.type === 'قبض' ? 'badge-success' : v.type === 'مطالبة' ? 'badge-info' : 'badge-warning'}">${v.type === 'قبض' ? '📥 قبض' : v.type === 'مطالبة' ? '📋 مطالبة' : '📤 صرف'}</span></td>
     <td style="color:var(--gray-700)">${v.date || '—'}</td>
     <td title="${v.description || ''}">${(v.description || '').substring(0, 35)}${(v.description || '').length > 35 ? '…' : ''}</td>
     <td style="font-weight:600">${Number(v.amount || 0).toLocaleString()} ر.س</td>
@@ -1351,10 +1354,11 @@ function printVoucher(id) {
   const amountWordsAr = numberToArabicWords(Number(v.amount || 0));
   const amountWordsEn = numberToEnglishWords(Number(v.amount || 0));
   const isReceipt = v.type === 'قبض';
-  const mainColor = isReceipt ? '#0f7b46' : '#c62828';
-  const lightBg = isReceipt ? '#f0faf4' : '#fdf2f2';
-  const typeAr = isReceipt ? 'قبض' : 'صرف';
-  const typeEn = isReceipt ? 'RECEIPT' : 'PAYMENT VOUCHER';
+  const isClaim = v.type === 'مطالبة';
+  const mainColor = isReceipt ? '#0f7b46' : isClaim ? '#1565c0' : '#c62828';
+  const lightBg = isReceipt ? '#f0faf4' : isClaim ? '#e3f2fd' : '#fdf2f2';
+  const typeAr = isReceipt ? 'قبض' : isClaim ? 'مطالبة' : 'صرف';
+  const typeEn = isReceipt ? 'RECEIPT' : isClaim ? 'CLAIM' : 'PAYMENT VOUCHER';
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${typeEn}</title>
     <style>
@@ -1421,7 +1425,7 @@ function printVoucher(id) {
           </div>
         </div>
         <div class="v-type-box">
-          <div class="type-icon">${isReceipt ? '📥' : '📤'}</div>
+          <div class="type-icon">${isReceipt ? '📥' : isClaim ? '📋' : '📤'}</div>
           <div class="type-ar">سند ${typeAr}</div>
           <div class="type-en">${typeEn}</div>
           <div class="type-num">${v.number || ''}</div>
@@ -1431,8 +1435,8 @@ function printVoucher(id) {
         <div class="v-amount-section">
           <div class="v-amount-main">
             <div>
-              <div class="label">${isReceipt ? 'المبلغ المقبوض' : 'المبلغ المدفوع'}</div>
-              <div class="label-en">${isReceipt ? 'Amount Received' : 'Amount Paid'}</div>
+              <div class="label">${isReceipt ? 'المبلغ المقبوض' : isClaim ? 'المبلغ المطالب به' : 'المبلغ المدفوع'}</div>
+              <div class="label-en">${isReceipt ? 'Amount Received' : isClaim ? 'Amount Claimed' : 'Amount Paid'}</div>
             </div>
             <div class="amount">${Number(v.amount || 0).toLocaleString('en-US')} SAR</div>
           </div>
@@ -1460,11 +1464,11 @@ function printVoucher(id) {
         <div class="v-signatures">
           <div class="v-sig-box">
             <div class="v-sig-line"></div>
-            <div class="v-sig-label">${isReceipt ? 'المدير / المستلم' : 'المحاسب'}<span class="en">${isReceipt ? 'Manager / Received by' : 'Accountant'}</span></div>
+            <div class="v-sig-label">${isReceipt ? 'المدير / المستلم' : isClaim ? 'مقدم المطالبة' : 'المحاسب'}<span class="en">${isReceipt ? 'Manager / Received by' : isClaim ? 'Claimed by' : 'Accountant'}</span></div>
           </div>
           <div class="v-sig-box">
             <div class="v-sig-line"></div>
-            <div class="v-sig-label">${isReceipt ? 'المحاسب' : 'المدير المفوض'}<span class="en">${isReceipt ? 'Accountant' : 'Authorized Manager'}</span></div>
+            <div class="v-sig-label">${isReceipt ? 'المحاسب' : isClaim ? 'الجهة المعالجة' : 'المدير المفوض'}<span class="en">${isReceipt ? 'Accountant' : isClaim ? 'Processed by' : 'Authorized Manager'}</span></div>
           </div>
         </div>
       </div>
