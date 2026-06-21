@@ -1,4 +1,5 @@
 const DB = {
+  _cache: {},
   init() {
     // هجرة من النظام القديم (متعدد المؤسسات) إلى النظام البسيط
     const org1Keys = ['org_1_properties','org_1_tenants','org_1_units','org_1_contracts','org_1_installments','org_1_maintenance','org_1_vouchers','org_1_finEntries'];
@@ -18,6 +19,7 @@ const DB = {
       localStorage.removeItem('_orgs');
       localStorage.removeItem('_currentOrg');
     }
+    this._cache = {};
     if (!localStorage.getItem('properties')) {
       this.seed();
     }
@@ -27,9 +29,12 @@ const DB = {
     return key;
   },
   _get(key) {
-    try { return JSON.parse(localStorage.getItem(this._p(key))) || []; } catch { return []; }
+    const pk = this._p(key);
+    if (this._cache[pk]) return this._cache[pk];
+    try { const v = JSON.parse(localStorage.getItem(pk)) || []; this._cache[pk] = v; return v; } catch { return []; }
   },
   _set(key, data) {
+    delete this._cache[this._p(key)];
     localStorage.setItem(this._p(key), JSON.stringify(data));
   },
   _nextId(items) {
