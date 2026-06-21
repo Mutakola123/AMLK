@@ -1,6 +1,7 @@
 let currentPage = 'dashboard';
 let editingId = null;
 let currentPropertyId = null;
+let eventsSetup = false;
 
 function init() {
   if (localStorage.getItem('_loggedIn') === '1') {
@@ -41,6 +42,8 @@ function logout() {
 }
 
 function setupEvents() {
+  if (eventsSetup) return;
+  eventsSetup = true;
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       const page = item.dataset.page;
@@ -365,21 +368,23 @@ function openPropertyForm(data) {
 }
 
 function saveProperty() {
-  const data = {
-    id: editingId || null,
-    name: document.getElementById('propName').value.trim(),
-    type: document.getElementById('propType').value,
-    address: document.getElementById('propAddress').value.trim(),
-    city: document.getElementById('propCity').value.trim(),
-    area: document.getElementById('propArea').value.trim(),
-    price: document.getElementById('propPrice').value.trim(),
-    status: document.getElementById('propStatus').value,
-    floors: document.getElementById('propFloors').value.trim()
-  };
-  if (!data.name) return alert('الرجاء إدخال اسم العقار');
-  DB.saveProperty(data);
-  closeModal('propertyModal');
-  refreshCurrentPage();
+  try {
+    const data = {
+      id: editingId || null,
+      name: document.getElementById('propName').value.trim(),
+      type: document.getElementById('propType').value,
+      address: document.getElementById('propAddress').value.trim(),
+      city: document.getElementById('propCity').value.trim(),
+      area: document.getElementById('propArea').value.trim(),
+      price: document.getElementById('propPrice').value.trim(),
+      status: document.getElementById('propStatus').value,
+      floors: document.getElementById('propFloors').value.trim()
+    };
+    if (!data.name) return alert('الرجاء إدخال اسم العقار');
+    DB.saveProperty(data);
+    closeModal('propertyModal');
+    refreshCurrentPage();
+  } catch(e) { alert('خطأ في الحفظ: ' + e.message); }
 }
 
 function editProperty(id) {
@@ -657,17 +662,19 @@ function openTenantForm(data) {
 }
 
 function saveTenant() {
-  const data = {
-    id: editingId || null,
-    name: document.getElementById('tenantName').value.trim(),
-    phone: document.getElementById('tenantPhone').value.trim(),
-    email: document.getElementById('tenantEmail').value.trim(),
-    identity: document.getElementById('tenantIdentity').value.trim()
-  };
-  if (!data.name) return alert('الرجاء إدخال اسم المستأجر');
-  DB.saveTenant(data);
-  closeModal('tenantModal');
-  refreshCurrentPage();
+  try {
+    const data = {
+      id: editingId || null,
+      name: document.getElementById('tenantName').value.trim(),
+      phone: document.getElementById('tenantPhone').value.trim(),
+      email: document.getElementById('tenantEmail').value.trim(),
+      identity: document.getElementById('tenantIdentity').value.trim()
+    };
+    if (!data.name) return alert('الرجاء إدخال اسم المستأجر');
+    DB.saveTenant(data);
+    closeModal('tenantModal');
+    refreshCurrentPage();
+  } catch(e) { alert('خطأ في الحفظ: ' + e.message); }
 }
 
 function editTenant(id) {
