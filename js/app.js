@@ -1348,7 +1348,8 @@ function printVoucher(id) {
   const v = DB.getVoucher(id);
   if (!v) return;
   const company = DB.getCompany();
-  const amountWords = numberToArabicWords(Number(v.amount || 0));
+  const amountWordsAr = numberToArabicWords(Number(v.amount || 0));
+  const amountWordsEn = numberToEnglishWords(Number(v.amount || 0));
   const isReceipt = v.type === 'قبض';
   const mainColor = isReceipt ? '#0f7b46' : '#c62828';
   const lightBg = isReceipt ? '#f0faf4' : '#fdf2f2';
@@ -1436,8 +1437,7 @@ function printVoucher(id) {
             <div class="amount">${Number(v.amount || 0).toLocaleString('en-US')} SAR</div>
           </div>
           <div class="v-amount-words">
-            <div class="ar">${amountWords} ريالاً سعودياً فقط لا غير</div>
-            <div class="en">Say: ${amountWords} Saudi Riyals Only</div>
+            <div class="ar">${amountWordsEn} Saudi Riyals Only</div>
           </div>
         </div>
         <div class="v-details">
@@ -1625,6 +1625,47 @@ function numberToArabicWords(num) {
   if (remainder > 0) parts.push(split3(remainder));
 
   return parts.join(' و ');
+}
+
+function numberToEnglishWords(num) {
+  if (num === 0 || isNaN(num)) return 'Zero';
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+  const split3 = n => {
+    const h = Math.floor(n / 100);
+    const r = n % 100;
+    const t = Math.floor(r / 10);
+    const o = r % 10;
+    let parts = [];
+    if (h > 0) parts.push(ones[h] + ' Hundred');
+    if (r > 0 && r < 20) {
+      parts.push(ones[r]);
+    } else {
+      if (t > 0) parts.push(tens[t]);
+      if (o > 0) parts.push(ones[o]);
+    }
+    return parts.join(' ');
+  };
+
+  if (num < 1000) return split3(num);
+
+  const millions = Math.floor(num / 1000000);
+  const thousands_ = Math.floor((num % 1000000) / 1000);
+  const remainder = num % 1000;
+
+  let parts = [];
+  if (millions > 0) {
+    if (millions === 1) parts.push('One Million');
+    else parts.push(split3(millions) + ' Million');
+  }
+  if (thousands_ > 0) {
+    if (thousands_ === 1) parts.push('One Thousand');
+    else parts.push(split3(thousands_) + ' Thousand');
+  }
+  if (remainder > 0) parts.push(split3(remainder));
+
+  return parts.join(' ');
 }
 
 // ---- بيانات الشركة ----
