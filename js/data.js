@@ -310,10 +310,19 @@ const DB = {
   },
   getFinEntry(id) { return this.getFinEntries().find(i => i.id === id); },
 
+  // بيانات الشركة
+  getCompany() {
+    try { return JSON.parse(localStorage.getItem('_company')) || { name: '', address: '', phone: '', email: '', cr: '' }; } catch { return { name: '', address: '', phone: '', email: '', cr: '' }; }
+  },
+  saveCompany(c) {
+    localStorage.setItem('_company', JSON.stringify(c));
+    return c;
+  },
+
   // تصدير جميع البيانات
   exportAll() {
     const data = {};
-    ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries','_users'].forEach(k => {
+    ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries','_users','_company'].forEach(k => {
       const val = localStorage.getItem(k);
       if (val) data[k] = JSON.parse(val);
     });

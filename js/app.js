@@ -1285,32 +1285,60 @@ function deleteVoucher(id) {
 function printVoucher(id) {
   const v = DB.getVoucher(id);
   if (!v) return;
+  const company = DB.getCompany();
+  const amountWords = numberToArabicWords(Number(v.amount || 0));
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${v.number} - ${v.type}</title>
     <style>
       body { font-family: 'Segoe UI',sans-serif; padding:0; margin:0; background:#f5f5f5; }
       .vp { padding:40px; max-width:700px; margin:40px auto; background:white; box-shadow:0 2px 12px rgba(0,0,0,0.1); border-radius:12px; }
-      .vp-hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #202124; padding-bottom:16px; margin-bottom:24px; }
-      .vp-hdr .t { font-size:28px; font-weight:700; }
-      .vp-hdr .n { font-size:14px; color:#5f6368; font-family:monospace; }
-      .vp-amt { font-size:36px; font-weight:700; text-align:center; padding:24px; background:#f8f9fa; border-radius:12px; margin-bottom:24px; }
-      .vp-desc { font-size:16px; line-height:2; padding:16px; border:1px solid #dadce0; border-radius:8px; min-height:80px; margin-bottom:24px; }
-      .vp-ftr { display:flex; justify-content:space-between; font-size:13px; color:#5f6368; border-top:1px solid #dadce0; padding-top:16px; }
-      @media print { body { background:white; } .vp { box-shadow:none; margin:0; border-radius:0; } }
+      .vp-org { text-align:center; border-bottom:3px double #202124; padding-bottom:20px; margin-bottom:24px; }
+      .vp-org h1 { margin:0 0 4px; font-size:24px; color:#202124; }
+      .vp-org .sub { font-size:13px; color:#5f6368; line-height:1.8; }
+      .vp-hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid ${v.type === 'قبض' ? '#0f9d58' : '#d93025'}; padding-bottom:12px; margin-bottom:20px; }
+      .vp-hdr .t { font-size:24px; font-weight:700; }
+      .vp-hdr .n { font-size:14px; color:#5f6368; font-family:monospace; text-align:left; }
+      .vp-amt { font-size:32px; font-weight:700; text-align:center; padding:20px; background:#f8f9fa; border-radius:12px; margin-bottom:8px; border:2px solid ${v.type === 'قبض' ? '#0f9d58' : '#d93025'}; }
+      .vp-words { text-align:center; font-size:16px; color:#5f6368; padding:12px; background:#fafafa; border-radius:8px; margin-bottom:24px; border:1px dashed #dadce0; }
+      .vp-words span { font-weight:600; color:#202124; }
+      .vp-desc { font-size:16px; line-height:2; padding:16px; border:1px solid #dadce0; border-radius:8px; min-height:60px; margin-bottom:24px; }
+      .vp-refs { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; font-size:14px; color:#5f6368; }
+      .vp-refs div { padding:8px 12px; background:#f8f9fa; border-radius:6px; }
+      .vp-refs strong { color:#202124; }
+      .vp-ftr { display:flex; justify-content:space-between; align-items:end; font-size:12px; color:#9aa0a6; border-top:1px solid #dadce0; padding-top:16px; margin-top:24px; }
+      .vp-sig { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; text-align:center; }
+      .vp-sig div { border-top:1px solid #dadce0; padding-top:8px; font-size:13px; color:#5f6368; }
+      @media print { body { background:white; } .vp { box-shadow:none; margin:0; border-radius:0; max-width:100%; } }
     </style>
   </head><body>
     <div class="vp">
+      <div class="vp-org">
+        <div style="font-size:42px;margin-bottom:8px">🏢</div>
+        <h1>${company.name || 'المؤسسة العقارية'}</h1>
+        <div class="sub">
+          ${company.address ? '📍 ' + company.address + '<br>' : ''}
+          ${company.phone ? '📱 ' + company.phone : ''} ${company.email ? '| ✉️ ' + company.email : ''}
+          ${company.cr ? '<br>س.ت: ' + company.cr : ''}
+        </div>
+      </div>
       <div class="vp-hdr">
         <div class="t" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${v.type === 'قبض' ? '📥' : '📤'} سند ${v.type === 'قبض' ? 'قبض' : 'صرف'}</div>
-        <div class="n">${v.number || ''}<br><span style="font-size:12px;color:#9aa0a6">${v.date || ''}</span></div>
+        <div class="n">
+          <div style="font-size:16px;font-weight:700">${v.number || ''}</div>
+          <div>${v.date || ''}</div>
+        </div>
       </div>
       <div class="vp-amt" style="color:${v.type === 'قبض' ? '#0f9d58' : '#d93025'}">${Number(v.amount || 0).toLocaleString()} ر.س</div>
-      <div class="vp-desc">${v.description || '—'}</div>
-      ${v.reference ? `<div style="text-align:center;margin-bottom:16px;color:#5f6368;font-size:14px">المرجع: ${v.reference}</div>` : ''}
+      <div class="vp-words">المبلغ نظراً: <span>${amountWords} ريالاً سعودياً فقط لا غير</span></div>
+      <div class="vp-desc"><strong>البيان:</strong> ${v.description || '—'}</div>
+      ${v.reference ? `<div class="vp-refs"><div><strong>المرجع:</strong> ${v.reference}</div><div><strong>رقم السند:</strong> ${v.number || ''}</div></div>` : ''}
       <div class="vp-ftr">
-        <span>رقم السند: ${v.number || ''}</span>
         <span>تاريخ الإصدار: ${v.date || ''}</span>
-        <span>🖨️ ${new Date().toLocaleDateString('ar-SA')}</span>
+        <span>تم الإصدار في: ${new Date().toLocaleDateString('ar-SA')} ${new Date().toLocaleTimeString('ar-SA')}</span>
+      </div>
+      <div class="vp-sig">
+        <div>المدير / الحاصل على المبلغ</div>
+        <div>المدير / صاحب الصلاحية</div>
       </div>
     </div>
     <script>window.onload=function(){window.print()}<\/script>
@@ -1419,6 +1447,76 @@ function importData(event) {
     }
   };
   reader.readAsText(file);
+}
+
+// ---- تحويل الأرقام إلى كلمات عربية ----
+function numberToArabicWords(num) {
+  if (num === 0 || isNaN(num)) return 'صفر';
+  const ones = ['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
+  const tens = ['','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
+  const hundreds = ['','مائة','مئتان','ثلاثمئة','أربعمئة','خمسمئة','ستمئة','سبعمئة','ثمانمئة','تسعمئة'];
+  const thousands = ['','ألف','ألفان','ثلاثة آلاف','أربعة آلاف','خمسة آلاف','ستة آلاف','سبعة آلاف','ثمانية آلاف','تسعة آلاف'];
+
+  const split3 = n => {
+    const h = Math.floor(n / 100);
+    const r = n % 100;
+    const t = Math.floor(r / 10);
+    const o = r % 10;
+    let parts = [];
+    if (h > 0) parts.push(hundreds[h]);
+    if (r > 0 && r < 20) {
+      parts.push(ones[r]);
+    } else {
+      if (o > 0) parts.push(ones[o]);
+      if (t > 0) parts.push(tens[t]);
+    }
+    return parts.join(' و ');
+  };
+
+  if (num < 1000) return split3(num);
+
+  const millions = Math.floor(num / 1000000);
+  const thousands_ = Math.floor((num % 1000000) / 1000);
+  const remainder = num % 1000;
+
+  let parts = [];
+  if (millions > 0) {
+    if (millions === 1) parts.push('مليون');
+    else if (millions === 2) parts.push('مليونان');
+    else parts.push(split3(millions) + ' ملايين');
+  }
+  if (thousands_ > 0) {
+    if (thousands_ === 1) parts.push('ألف');
+    else if (thousands_ === 2) parts.push('ألفان');
+    else parts.push(split3(thousands_) + ' آلاف');
+  }
+  if (remainder > 0) parts.push(split3(remainder));
+
+  return parts.join(' و ');
+}
+
+// ---- بيانات الشركة ----
+function openCompanyForm() {
+  const c = DB.getCompany();
+  document.getElementById('companyName').value = c.name || '';
+  document.getElementById('companyAddress').value = c.address || '';
+  document.getElementById('companyPhone').value = c.phone || '';
+  document.getElementById('companyEmail').value = c.email || '';
+  document.getElementById('companyCR').value = c.cr || '';
+  openModal('companyModal');
+}
+
+function saveCompany() {
+  const data = {
+    name: document.getElementById('companyName').value.trim(),
+    address: document.getElementById('companyAddress').value.trim(),
+    phone: document.getElementById('companyPhone').value.trim(),
+    email: document.getElementById('companyEmail').value.trim(),
+    cr: document.getElementById('companyCR').value.trim()
+  };
+  DB.saveCompany(data);
+  closeModal('companyModal');
+  alert('✅ تم حفظ بيانات الشركة');
 }
 
 // ---- Helpers ----
