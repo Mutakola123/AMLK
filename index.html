@@ -232,7 +232,7 @@
         </div>
         <table>
           <thead>
-            <tr><th>رقم السند</th><th>النوع</th><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>المرجع</th><th></th></tr>
+            <tr><th>رقم السند</th><th>النوع</th><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>اسم الشخص</th><th></th></tr>
           </thead>
           <tbody id="vouchersTableBody"></tbody>
         </table>
@@ -670,6 +670,10 @@
       <div class="form-group">
         <label>البيان</label>
         <textarea id="voucherDesc" rows="2" placeholder="وصف السند (سبب القبض/الصرف)"></textarea>
+      </div>
+      <div class="form-group">
+        <label>اسم الشخص</label>
+        <input type="text" id="voucherPerson" placeholder="اسم الشخص (المحصل / المدفوع له)">
       </div>
       <div class="form-row">
         <div class="form-group">

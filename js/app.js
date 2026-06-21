@@ -888,6 +888,7 @@ function savePayment() {
     date: inst.paymentDate,
     amount: inst.amount,
     description: `تحصيل إيجار ${prop ? prop.name : ''} - ${tenant ? tenant.name : ''}`,
+    person: tenant ? tenant.name : '',
     reference: contract ? `عقد #${contract.id}` : ''
   });
   closeModal('paymentModal');
@@ -1016,7 +1017,7 @@ function renderVouchers() {
     <td style="color:var(--gray-700)">${v.date || '—'}</td>
     <td title="${v.description || ''}">${(v.description || '').substring(0, 35)}${(v.description || '').length > 35 ? '…' : ''}</td>
     <td style="font-weight:600">${Number(v.amount || 0).toLocaleString()} ر.س</td>
-    <td style="color:var(--gray-500);font-size:13px">${v.reference || '—'}</td>
+    <td style="color:var(--gray-500);font-size:13px">${v.person || '—'}</td>
     <td><div class="actions">
       <button class="btn-icon" onclick="editVoucher(${v.id})" title="تعديل">✏️</button>
       <button class="btn-icon" onclick="printVoucher(${v.id})" title="طباعة">🖨️</button>
@@ -1230,6 +1231,7 @@ function openVoucherForm(data) {
   document.getElementById('voucherDate').value = data?.date || new Date().toISOString().split('T')[0];
   document.getElementById('voucherAmount').value = data?.amount || '';
   document.getElementById('voucherDesc').value = data?.description || '';
+  document.getElementById('voucherPerson').value = data?.person || '';
   document.getElementById('voucherRefType').value = '';
   document.getElementById('voucherRefManual').value = data?.reference || '';
   toggleVoucherRef();
@@ -1264,7 +1266,7 @@ function saveVoucher() {
   if (!date) return alert('الرجاء إدخال التاريخ');
   if (!amount || Number(amount) <= 0) return alert('الرجاء إدخال مبلغ صحيح');
   if (!desc) return alert('الرجاء إدخال بيان السند');
-  const data = { id: editingId || null, type, date, amount, description: desc, reference: ref };
+  const data = { id: editingId || null, type, date, amount, description: desc, person: document.getElementById('voucherPerson').value.trim(), reference: ref };
   const saved = DB.saveVoucher(data);
   closeModal('voucherModal');
   renderVouchers();
@@ -1391,12 +1393,10 @@ function printVoucher(id) {
             <div class="v-cell lbl">البيان<span class="en">Description</span></div>
             <div class="v-cell val wide">${v.description || '—'}</div>
           </div>
-          ${v.reference ? `<div class="v-row">
-            <div class="v-cell lbl">المرجع<span class="en">Reference</span></div>
-            <div class="v-cell val">${v.reference}</div>
-            <div class="v-cell lbl">طريقة الدفع<span class="en">Payment</span></div>
-            <div class="v-cell val">نقدي / Cash</div>
-          </div>` : ''}
+          <div class="v-row">
+            <div class="v-cell lbl">اسم الشخص<span class="en">Person</span></div>
+            <div class="v-cell val">${v.person || '—'}</div>
+            ${v.reference ? `<div class="v-cell lbl">المرجع<span class="en">Reference</span></div><div class="v-cell val">${v.reference}</div>` : ''}
         </div>
         <div class="v-signatures">
           <div class="v-sig-box">
