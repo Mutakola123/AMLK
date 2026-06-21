@@ -1637,8 +1637,13 @@ function openCompanyForm() {
   document.getElementById('companyCR').value = c.cr || '';
   document.getElementById('companyVAT').value = c.vat || '';
   const preview = document.getElementById('companyLogoPreview');
-  if (c.logo) { preview.src = c.logo; preview.style.display = 'block'; }
-  else { preview.src = ''; preview.style.display = 'none'; }
+  if (c.logo && c.logo.indexOf('data:image') === 0) {
+    preview.src = c.logo;
+    preview.style.display = 'block';
+  } else {
+    preview.removeAttribute('src');
+    preview.style.display = 'none';
+  }
   openModal('companyModal');
 }
 
@@ -1656,13 +1661,15 @@ function previewLogo(event) {
 }
 
 function removeLogo() {
-  document.getElementById('companyLogoPreview').src = '';
-  document.getElementById('companyLogoPreview').style.display = 'none';
+  const preview = document.getElementById('companyLogoPreview');
+  preview.removeAttribute('src');
+  preview.style.display = 'none';
   document.getElementById('companyLogoFile').value = '';
 }
 
 function saveCompany() {
-  const logo = document.getElementById('companyLogoPreview').src;
+  const preview = document.getElementById('companyLogoPreview');
+  const hasLogo = preview.style.display !== 'none' && preview.src && preview.src.indexOf('data:image') === 0;
   const data = {
     name: document.getElementById('companyName').value.trim(),
     address: document.getElementById('companyAddress').value.trim(),
@@ -1670,7 +1677,7 @@ function saveCompany() {
     email: document.getElementById('companyEmail').value.trim(),
     cr: document.getElementById('companyCR').value.trim(),
     vat: document.getElementById('companyVAT').value.trim(),
-    logo: (logo && logo !== window.location.href) ? logo : ''
+    logo: hasLogo ? preview.src : ''
   };
   DB.saveCompany(data);
   closeModal('companyModal');
