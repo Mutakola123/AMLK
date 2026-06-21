@@ -1348,7 +1348,7 @@ function printVoucher(id) {
       </div>
       <div class="v-header">
         <div class="v-company">
-          <div class="v-company-logo">🏢</div>
+          <div class="v-company-logo">${company.logo ? '<img src="' + company.logo + '" style="width:56px;height:56px;border-radius:8px;object-fit:contain">' : '🏢'}</div>
           <div class="v-company-info">
             <h2>${company.name || 'المؤسسة العقارية'}</h2>
             <div class="en-name">${company.name || 'Real Estate Company'}</div>
@@ -1578,17 +1578,41 @@ function openCompanyForm() {
   document.getElementById('companyEmail').value = c.email || '';
   document.getElementById('companyCR').value = c.cr || '';
   document.getElementById('companyVAT').value = c.vat || '';
+  const preview = document.getElementById('companyLogoPreview');
+  if (c.logo) { preview.src = c.logo; preview.style.display = 'block'; }
+  else { preview.src = ''; preview.style.display = 'none'; }
   openModal('companyModal');
 }
 
+function previewLogo(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 500000) return alert('حجم الصورة يجب أن يكون أقل من 500 KB');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.getElementById('companyLogoPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo() {
+  document.getElementById('companyLogoPreview').src = '';
+  document.getElementById('companyLogoPreview').style.display = 'none';
+  document.getElementById('companyLogoFile').value = '';
+}
+
 function saveCompany() {
+  const logo = document.getElementById('companyLogoPreview').src;
   const data = {
     name: document.getElementById('companyName').value.trim(),
     address: document.getElementById('companyAddress').value.trim(),
     phone: document.getElementById('companyPhone').value.trim(),
     email: document.getElementById('companyEmail').value.trim(),
     cr: document.getElementById('companyCR').value.trim(),
-    vat: document.getElementById('companyVAT').value.trim()
+    vat: document.getElementById('companyVAT').value.trim(),
+    logo: (logo && logo !== window.location.href) ? logo : ''
   };
   DB.saveCompany(data);
   closeModal('companyModal');
