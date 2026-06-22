@@ -2,8 +2,6 @@ const Sync = {
   db: null,
   orgId: null,
   connected: false,
-  listeners: [],
-  _unsavedChanges: {},
 
   DEFAULT_CONFIG: {
     apiKey: "AIzaSyCFjCgSlKJXOFqFSL28WNQIZG5oy92dKzk",
@@ -49,15 +47,6 @@ const Sync = {
 
   saveConfig(cfg) {
     localStorage.setItem('_syncConfig', JSON.stringify(cfg));
-  },
-
-  isConfigured() {
-    const c = this.getConfig();
-    return c && c.apiKey && c.databaseURL;
-  },
-
-  hasDefaultConfig() {
-    return true;
   },
 
   _path(key) {
@@ -117,23 +106,6 @@ const Sync = {
     });
   },
 
-  pull(key, callback) {
-    if (!this.connected || !this.db) { if (callback) callback(null); return; }
-    this.db.ref(this._path(key)).once('value', (snap) => {
-      if (callback) callback(snap.val());
-    }, (err) => {
-      console.warn('Pull error:', key, err);
-      if (callback) callback(null);
-    });
-  },
-
-  remove(key, callback) {
-    if (!this.connected || !this.db) { if (callback) callback(false); return; }
-    this.db.ref(this._path(key)).remove((err) => {
-      if (callback) callback(!err);
-    });
-  },
-
   startRealtime() {
     if (!this.connected || !this.db) return;
     const keys = ['properties','tenants','units','contracts','installments','maintenance','vouchers','finEntries'];
@@ -151,10 +123,5 @@ const Sync = {
         }
       });
     });
-  },
-
-  stopRealtime() {
-    if (!this.db) return;
-    this.db.ref(this.orgId).off();
   }
 };

@@ -22,12 +22,11 @@ const DB = {
     }
   },
 
-  _p(key) { return key; },
   _get(key) {
-    try { return JSON.parse(localStorage.getItem(this._p(key))) || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
   },
   _set(key, data) {
-    localStorage.setItem(this._p(key), JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(data));
     if (typeof Sync !== 'undefined' && Sync.connected && Sync.db) {
       Sync.push(key, data);
     }
@@ -230,42 +229,6 @@ const DB = {
       upcomingPayments: pending, lateTotal: due, lateCount: late,
       activeContracts: active, rentedUnits: rented, vacantUnits: vacant,
       totalUnits: units.length, pendingMaintenance: pm, maintenanceCost: mc
-    };
-  },
-
-  // إحصائيات عامة
-  getStats() {
-    const properties = this.getProperties();
-    const tenants = this.getTenants();
-    const contracts = this.getContracts();
-    const inst = this.getInstallments();
-    const maintenance = this.getMaintenance();
-    const units = this.getUnits();
-    const now = new Date();
-    const cy = now.getFullYear();
-    const cm = now.getMonth();
-    const today = new Date(now.toISOString().split('T')[0]);
-
-    const paid = inst.filter(i => i.status === 'مدفوع').reduce((s, i) => s + (Number(i.amount)||0), 0);
-    const due = inst.filter(i => i.status === 'متأخر').reduce((s, i) => s + (Number(i.amount)||0), 0);
-    const lateCount = inst.filter(i => i.status === 'متأخر' || (i.status !== 'مدفوع' && new Date(i.dueDate) < today)).length;
-    const pendingM = maintenance.filter(m => m.status !== 'مكتملة').length;
-    const maintenanceCost = maintenance.filter(m => m.status === 'مكتملة').reduce((s, m) => s + (Number(m.cost)||0), 0);
-    const monthly = inst.filter(i => {
-      const d = new Date(i.dueDate);
-      return d.getMonth() === cm && d.getFullYear() === cy && i.status === 'مدفوع';
-    }).reduce((s, i) => s + (Number(i.amount)||0), 0);
-    const yearly = inst.filter(i => {
-      const d = new Date(i.dueDate);
-      return d.getFullYear() === cy && i.status === 'مدفوع';
-    }).reduce((s, i) => s + (Number(i.amount)||0), 0);
-
-    return {
-      totalProperties: properties.length, totalTenants: tenants.length,
-      activeContracts: contracts.filter(c => c.status === 'نشط').length,
-      totalPaid: paid, totalDue: due, pendingMaintenance: pendingM,
-      totalUnits: units.length, yearlyIncome: yearly,
-      monthlyIncome: monthly, lateCount: lateCount, maintenanceCost: maintenanceCost
     };
   },
 

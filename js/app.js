@@ -10,11 +10,8 @@ function init() {
   }
 }
 
-let renderedPages = {};
-
 function startApp() {
   DB.init();
-  renderedPages = {};
   setupEvents();
   showPage('dashboard');
   checkAutoSync();
@@ -130,7 +127,6 @@ function renderPage(page) {
       case 'finance': renderFinance(); break;
       case 'property-detail': if (currentPropertyId) renderPropertyDetail(currentPropertyId); break;
     }
-    renderedPages[page] = true;
   } catch (e) { console.warn('renderPage error:', page, e); }
 }
 
@@ -1825,21 +1821,6 @@ function syncNow() {
       updateSyncStatus();
     } else {
       statusEl.innerHTML = '<span style="color:var(--danger)">❌ فشل الرفع - تحقق من الاتصال</span>';
-    }
-  });
-}
-
-function pullSyncNow() {
-  const statusEl = document.getElementById('syncStatusModal');
-  if (!statusEl) return;
-  statusEl.innerHTML = '<span style="color:var(--primary)">⏳ جارٍ تحميل البيانات...</span>';
-  Sync.pullAll((ok, info) => {
-    if (ok) {
-      statusEl.innerHTML = '<span style="color:var(--success)">✅ تم التحميل - ' + (info.updated || 0) + ' حقل مُحدَّث</span>';
-      refreshCurrentPage();
-      updateSyncStatus();
-    } else {
-      statusEl.innerHTML = '<span style="color:var(--danger)">❌ فشل التحميل</span>';
     }
   });
 }
