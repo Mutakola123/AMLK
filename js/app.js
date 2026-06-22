@@ -1856,19 +1856,26 @@ function updateSyncStatus() {
 }
 
 function checkAutoSync() {
-  if (Sync.isConfigured()) {
-    Sync.init((ok) => {
-      if (ok) {
-        Sync.pullAll((ok2, info) => {
-          if (ok2 && info.updated > 0) {
-            refreshCurrentPage();
-          }
-          Sync.startRealtime();
-        });
-      }
-      updateSyncStatus();
+  if (!Sync.getConfig()) {
+    Sync.saveConfig({
+      orgId: 'amlak-default',
+      apiKey: Sync.DEFAULT_CONFIG.apiKey,
+      authDomain: Sync.DEFAULT_CONFIG.authDomain,
+      databaseURL: Sync.DEFAULT_CONFIG.databaseURL,
+      projectId: Sync.DEFAULT_CONFIG.projectId
     });
   }
+  Sync.init((ok) => {
+    if (ok) {
+      Sync.pullAll((ok2, info) => {
+        if (ok2 && info.updated > 0) {
+          refreshCurrentPage();
+        }
+        Sync.startRealtime();
+      });
+    }
+    updateSyncStatus();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -5,6 +5,13 @@ const Sync = {
   listeners: [],
   _unsavedChanges: {},
 
+  DEFAULT_CONFIG: {
+    apiKey: "AIzaSyCFjCgSlKJXOFqFSL28WNQIZG5oy92dKzk",
+    authDomain: "amlak-cdb09.firebaseapp.com",
+    databaseURL: "https://amlak-cdb09-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "amlak-cdb09"
+  },
+
   init(callback) {
     const config = this.getConfig();
     if (!config || !config.apiKey) {
@@ -47,6 +54,10 @@ const Sync = {
   isConfigured() {
     const c = this.getConfig();
     return c && c.apiKey && c.databaseURL;
+  },
+
+  hasDefaultConfig() {
+    return true;
   },
 
   _path(key) {
