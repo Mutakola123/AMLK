@@ -1868,8 +1868,14 @@ function checkAutoSync() {
   Sync.init((ok) => {
     if (ok) {
       Sync.pullAll((ok2, info) => {
-        if (ok2 && info.updated > 0) {
-          refreshCurrentPage();
+        if (ok2) {
+          if (info.updated > 0) {
+            refreshCurrentPage();
+          } else {
+            Sync.pushAll((pushed) => {
+              if (pushed) console.log('Initial data pushed to Firebase');
+            });
+          }
         }
         Sync.startRealtime();
       });
