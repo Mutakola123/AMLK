@@ -1289,6 +1289,8 @@ function openVoucherForm(data) {
   document.getElementById('voucherAmount').value = data?.amount || '';
   document.getElementById('voucherDesc').value = data?.description || '';
   document.getElementById('voucherPerson').value = data?.person || '';
+  document.getElementById('voucherCR').value = data?.cr || '';
+  document.getElementById('voucherTax').value = data?.tax || '';
   document.getElementById('voucherRefType').value = '';
   document.getElementById('voucherRefManual').value = data?.reference || '';
   toggleVoucherRef();
@@ -1320,7 +1322,7 @@ function saveVoucher() {
   if (!date) return alert('الرجاء إدخال التاريخ');
   if (!amount || Number(amount) <= 0) return alert('الرجاء إدخال مبلغ صحيح');
   if (!desc) return alert('الرجاء إدخال بيان السند');
-  const data = { id: editingId || null, type, date, amount, description: desc, person: document.getElementById('voucherPerson').value.trim(), reference: ref };
+  const data = { id: editingId || null, type, date, amount, description: desc, person: document.getElementById('voucherPerson').value.trim(), cr: document.getElementById('voucherCR').value.trim(), tax: document.getElementById('voucherTax').value.trim(), reference: ref };
   const saved = DB.saveVoucher(data);
   closeModal('voucherModal');
   refreshCurrentPage();
@@ -1456,6 +1458,8 @@ function printVoucher(id) {
             <div class="v-info-label">اسم الشخص<span class="en">Person</span></div>
             <div class="v-info-value">${v.person || '—'}</div>
           </div>
+          ${v.cr ? '<div class="v-info-item"><div class="v-info-label">السجل التجاري<span class="en">CR No.</span></div><div class="v-info-value" style="font-family:monospace">' + v.cr + '</div></div>' : ''}
+          ${v.tax ? '<div class="v-info-item"><div class="v-info-label">الرقم الضريبي<span class="en">Tax No.</span></div><div class="v-info-value" style="font-family:monospace">' + v.tax + '</div></div>' : ''}
           ${v.reference ? '<div class="v-info-item full"><div class="v-info-label">المرجع<span class="en">Reference</span></div><div class="v-info-value">' + v.reference + '</div></div>' : ''}
         </div>
         <div class="v-signatures">
