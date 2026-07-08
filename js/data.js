@@ -275,7 +275,10 @@ const DB = {
 
   // بيانات الشركة
   getCompany() {
-    try { return JSON.parse(localStorage.getItem('_company')) || { name: '', address: '', phone: '', email: '', cr: '', vat: '', logo: '' }; } catch { return { name: '', address: '', phone: '', email: '', cr: '', vat: '', logo: '' }; }
+    try {
+      var c = JSON.parse(localStorage.getItem('_company')) || {};
+      return { name: c.name || '', address: c.address || '', phone: c.phone || '', email: c.email || '', cr: c.cr || '', vat: c.vat || '', logo: c.logo || '' };
+    } catch { return { name: '', address: '', phone: '', email: '', cr: '', vat: '', logo: '' }; }
   },
   saveCompany(c) {
     localStorage.setItem('_company', JSON.stringify(c));
