@@ -1370,8 +1370,8 @@ function printVoucher(id) {
       .v-header-top::after { content:''; position:absolute; bottom:-30px; left:-30px; width:120px; height:120px; background:rgba(255,255,255,0.08); border-radius:50%; }
       .v-header-top::before { content:''; position:absolute; top:-20px; right:40%; width:80px; height:80px; background:rgba(255,255,255,0.05); border-radius:50%; }
       .v-top-company { display:flex; align-items:center; gap:14px; z-index:1; }
-      .v-top-logo { width:56px; height:56px; border-radius:14px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:28px; backdrop-filter:blur(10px); border:2px solid rgba(255,255,255,0.3); }
-      .v-top-logo img { width:56px; height:56px; border-radius:14px; object-fit:contain; }
+      .v-top-logo { width:80px; height:80px; border-radius:14px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:40px; backdrop-filter:blur(10px); border:2px solid rgba(255,255,255,0.3); }
+      .v-top-logo img { width:80px; height:80px; border-radius:14px; object-fit:contain; }
       .v-top-name { font-size:20px; font-weight:800; }
       .v-top-sub { font-size:11px; opacity:0.85; margin-top:2px; }
       .v-top-right { text-align:left; direction:ltr; z-index:1; }
