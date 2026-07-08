@@ -1409,7 +1409,7 @@ function printVoucher(id) {
               ${company.phone ? ' | Tel: ' + company.phone : ''}
               ${company.email ? ' | ' + company.email : ''}
               ${company.cr ? '<br>CR: ' + company.cr : ''}
-              ${company.vat ? ' | VAT: ' + company.vat : ''}
+              ${company.vat ? '<br>رخصة فال: ' + company.vat : ''}
             </p>
           </div>
         </div>
