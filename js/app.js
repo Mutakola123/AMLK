@@ -62,33 +62,6 @@ function setupEvents() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updateVoucherPreview);
   });
-
-  var btnMap = {
-    'propertyModal': saveProperty,
-    'tenantModal': saveTenant,
-    'contractModal': saveContract,
-    'paymentModal': savePayment,
-    'maintenanceModal': saveMaintenance,
-    'unitModal': saveUnit,
-    'voucherModal': saveVoucher,
-    'finEntryModal': saveFinEntry,
-    'userModal': saveUser,
-    'companyModal': saveCompany
-  };
-  Object.keys(btnMap).forEach(modalId => {
-    var modal = document.getElementById(modalId);
-    if (!modal) return;
-    var btns = modal.querySelectorAll('.modal-footer .btn-primary');
-    btns.forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        btnMap[modalId]();
-      });
-    });
-  });
-
-  var payUnpaid = document.getElementById('payUnpaidBtn');
-  if (payUnpaid) payUnpaid.addEventListener('click', function(e) { e.preventDefault(); markUnpaid(); });
 }
 
 function showPage(page) {
@@ -393,7 +366,7 @@ function openPropertyForm(data) {
 
 function saveProperty() {
   try {
-    const data = {
+    var data = {
       id: editingId || null,
       name: document.getElementById('propName').value.trim(),
       type: document.getElementById('propType').value,
@@ -408,7 +381,9 @@ function saveProperty() {
     DB.saveProperty(data);
     closeModal('propertyModal');
     refreshCurrentPage();
-  } catch(e) { alert('خطأ في الحفظ: ' + e.message); }
+  } catch(e) {
+    alert('خطأ في الحفظ: ' + e.message);
+  }
 }
 
 function editProperty(id) {
