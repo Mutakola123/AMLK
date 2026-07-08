@@ -3,10 +3,6 @@ let editingId = null;
 let currentPropertyId = null;
 let eventsSetup = false;
 
-window.onerror = function(msg, url, line) {
-  document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;bottom:0;left:0;right:0;background:red;color:white;padding:10px;z-index:99999;font-size:12px;direction:ltr">JS ERROR: ' + msg + ' (line ' + line + ')</div>');
-};
-
 function init() {
   if (localStorage.getItem('_loggedIn') === '1') {
     document.getElementById('loginOverlay').classList.add('hidden');
@@ -1853,35 +1849,3 @@ function checkAutoSync() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-// Bulletproof event delegation for ALL modal save/close buttons
-document.addEventListener('click', function(e) {
-  var btn = e.target;
-  if (btn.tagName !== 'BUTTON') return;
-  var text = btn.textContent.trim();
-  var modal = btn.closest('.modal-overlay');
-  if (!modal) return;
-  var id = modal.id;
-
-  if (text === 'حفظ' || text === '💾 حفظ السند' || text === '💾 حفظ' || text === '✅ تأكيد الدفع') {
-    e.preventDefault();
-    e.stopPropagation();
-    var map = {
-      'propertyModal': function() { saveProperty(); },
-      'tenantModal': function() { saveTenant(); },
-      'contractModal': function() { saveContract(); },
-      'paymentModal': function() { savePayment(); },
-      'maintenanceModal': function() { saveMaintenance(); },
-      'unitModal': function() { saveUnit(); },
-      'voucherModal': function() { saveVoucher(); },
-      'finEntryModal': function() { saveFinEntry(); },
-      'userModal': function() { saveUser(); },
-      'companyModal': function() { saveCompany(); }
-    };
-    if (map[id]) map[id]();
-  }
-  if (text === '⏪ إلغاء الدفع') {
-    e.preventDefault();
-    markUnpaid();
-  }
-});
